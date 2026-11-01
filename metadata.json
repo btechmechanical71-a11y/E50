@@ -1,0 +1,6 @@
+{
+  "name": "E50",
+  "description": "50% Efforts Towards Environment - Mission LiFE sustainability app for energy DNA, tracking, 7-day experiments, and eco-games.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
