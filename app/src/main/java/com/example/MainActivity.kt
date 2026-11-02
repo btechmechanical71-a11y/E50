@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun E50App(viewModel: E50ViewModel = viewModel()) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
+    val authUiState by viewModel.authUiState.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
     val householdDna by viewModel.householdDna.collectAsStateWithLifecycle()
     val footprintEntries by viewModel.footprintEntries.collectAsStateWithLifecycle()
@@ -149,9 +150,23 @@ fun E50App(viewModel: E50ViewModel = viewModel()) {
 
                 is AppScreen.Auth -> {
                     AuthScreen(
-                        onAuthSuccess = { email, name, city, isGuest ->
-                            viewModel.signIn(email, name, city, isGuest)
+                        authUiState = authUiState,
+                        onSignIn = { email, password ->
+                            viewModel.signInWithEmail(email, password)
                         },
+                        onSignUp = { email, password, name, city ->
+                            viewModel.signUpWithEmail(email, password, name, city)
+                        },
+                        onForgotPassword = { email ->
+                            viewModel.requestPasswordReset(email)
+                        },
+                        onUpdatePassword = { password ->
+                            viewModel.updatePassword(password)
+                        },
+                        onGuest = {
+                            viewModel.signIn("guest@e50.in", "Guest Citizen", "Ahmedabad", true)
+                        },
+                        onClearMessage = { viewModel.clearAuthMessage() },
                         onBack = { viewModel.navigateTo(AppScreen.Landing) }
                     )
                 }
