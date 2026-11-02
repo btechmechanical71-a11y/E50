@@ -82,7 +82,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                 ?.takeIf { it.isNotBlank() }
                                 ?: email.substringBefore("@").ifBlank { "Eco Citizen" }
                             val city = user?.userMetadata?.get("city")
-                                ?.toString()?.removeSurrounding("\\\"")
+                                ?.jsonPrimitive?.contentOrNull
                                 ?.takeIf { it.isNotBlank() }
                                 ?: "Ahmedabad"
 
