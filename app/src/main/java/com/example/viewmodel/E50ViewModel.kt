@@ -135,39 +135,155 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                         ) {
                                             return@launch
                                         }
+                                        // Keep the signed-in user's device history when the cloud tables
+                                        // are still empty, then migrate that history to Supabase.
+                                        val localProfile = repository.userProfile.value
+                                        val demoFootprintIds = setOf(
+                                            "fp_oct_2026", "fp_sep_2026", "fp_aug_2026"
+                                        )
+                                        val demoImpactIds = setOf("imp_1", "imp_2")
+
+                                        val localFootprints = repository.footprintEntries.value
+                                            .filterNot { it.id in demoFootprintIds }
+                                        val localImpactLogs = repository.impactLogs.value
+                                            .filterNot { it.id in demoImpactIds }
+                                        val localGameScores = repository.gameScores.value
+
+                                        val mergedFootprints = (snapshot.footprints + localFootprints)
+                                            .distinctBy { "${it.monthName.trim().lowercase()}-${it.year}" }
+                                            .sortedByDescending { it.timestamp }
+
                                         val mergedExperiments = repository.experiments.value.map { local ->
                                             val remote = snapshot.experiments.firstOrNull { it.id == local.id }
-                                            if (remote == null) {
-                                                local
+                                            val remoteChecks = snapshot.dailyChecks
+                                                .filter { it.experimentId == local.id }
+                                                .associateBy { it.check.dayNumber }
+                                            val completedDays = (local.completedDays + remote?.completedDays.orEmpty())
+                                                .distinct()
+                                                .sorted()
+                                            val startedAt = remote?.startedTimestamp ?: local.startedTimestamp
+                                            val checks = local.dailyChecks.map { localCheck ->
+                                                val remoteCheck = remoteChecks[localCheck.dayNumber]?.check
+                                                when {
+                                                    remoteCheck?.completed == true -> remoteCheck
+                                                    localCheck.completed -> localCheck
+                                                    remoteCheck != null -> remoteCheck
+                                                    else -> localCheck
+                                                }
+                                            }
+                                            val status = when {
+                                                completedDays.size >= local.targetDays -> ExperimentStatus.COMPLETED
+                                                remote?.status == ExperimentStatus.ACTIVE ||
+                                                    local.status == ExperimentStatus.ACTIVE ||
+                                                    startedAt != null -> ExperimentStatus.ACTIVE
+                                                else -> local.status
+                                            }
+                                            local.copy(
+                                                status = status,
+                                                startedTimestamp = startedAt,
+                                                completedDays = completedDays,
+                                                dailyChecks = checks
+                                            )
+                                        }
+
+                                        val mergedGameScores = (snapshot.gameScores + localGameScores)
+                                            .distinctBy { it.id }
+                                            .sortedByDescending { it.timestamp }
+                                        val mergedImpactLogs = (snapshot.impactLogs + localImpactLogs)
+                                            .distinctBy { it.id }
+                                            .sortedByDescending { it.timestamp }
+
+                                        val mergedDna = snapshot.householdDna
+                                            ?: if (localProfile.onboardingCompleted) {
+                                                repository.householdDna.value
                                             } else {
-                                                val remoteChecks = snapshot.dailyChecks
-                                                    .filter { it.experimentId == local.id }
-                                                    .associateBy { it.check.dayNumber }
-                                                local.copy(
-                                                    status = remote.status,
-                                                    startedTimestamp = remote.startedTimestamp,
-                                                    completedDays = remote.completedDays,
-                                                    dailyChecks = local.dailyChecks.map { check ->
-                                                        remoteChecks[check.dayNumber]?.check
-                                                            ?: if (check.dayNumber in remote.completedDays) {
-                                                                check.copy(completed = true)
-                                                            } else {
-                                                                check
-                                                            }
-                                                    }
+                                                null
+                                            }
+                                        val mergedProfile = snapshot.profile.copy(
+                                            displayName = localProfile.displayName.ifBlank {
+                                                snapshot.profile.displayName
+                                            },
+                                            city = localProfile.city.ifBlank { snapshot.profile.city },
+                                            onboardingCompleted = snapshot.profile.onboardingCompleted ||
+                                                localProfile.onboardingCompleted,
+                                            selectedAvatar = localProfile.selectedAvatar,
+                                            unlockedAvatars = (
+                                                snapshot.profile.unlockedAvatars + localProfile.unlockedAvatars
+                                            ).distinct()
+                                        )
+
+                                        repository.restoreCloudData(
+                                            profile = mergedProfile,
+                                            dna = mergedDna,
+                                            footprints = mergedFootprints,
+                                            experiments = mergedExperiments,
+                                            gameScores = mergedGameScores,
+                                            impactLogs = mergedImpactLogs
+                                        )
+
+                                        // One-time backfill: make locally retained user records durable in
+                                        // Supabase before subsequent sign-outs or device changes.
+                                        val syncFailures = mutableListOf<String>()
+                                        suspend fun migrateRecord(label: String, action: suspend () -> Unit) {
+                                            try {
+                                                action()
+                                            } catch (syncError: Exception) {
+                                                syncFailures.add(
+                                                    "$label: ${syncError.message ?: "sync failed"}"
                                                 )
                                             }
                                         }
-                                        repository.restoreCloudData(
-                                            profile = snapshot.profile,
-                                            dna = snapshot.householdDna,
-                                            footprints = snapshot.footprints,
-                                            experiments = mergedExperiments,
-                                            gameScores = snapshot.gameScores,
-                                            impactLogs = snapshot.impactLogs
-                                        )
+
+                                        migrateRecord("profile") {
+                                            cloudRepository.saveProfile(mergedProfile)
+                                        }
+                                        if (mergedDna != null) {
+                                            migrateRecord("household profile") {
+                                                cloudRepository.saveHouseholdDna(
+                                                    authenticatedUserId,
+                                                    mergedDna
+                                                )
+                                            }
+                                        }
+                                        for (entry in localFootprints) {
+                                            migrateRecord("electricity history") {
+                                                cloudRepository.saveFootprint(authenticatedUserId, entry)
+                                            }
+                                        }
+                                        for (experiment in mergedExperiments) {
+                                            val hasCloudState = snapshot.experiments.any {
+                                                it.id == experiment.id
+                                            }
+                                            val isRealProgress = experiment.startedTimestamp != null ||
+                                                (experiment.completedDays.isNotEmpty() &&
+                                                    experiment.id != "exp_ac_efficiency")
+                                            if (hasCloudState || isRealProgress) {
+                                                migrateRecord("experiment history") {
+                                                    cloudRepository.saveExperiment(
+                                                        authenticatedUserId,
+                                                        experiment
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        for (score in localGameScores) {
+                                            migrateRecord("game history") {
+                                                cloudRepository.saveGameScore(authenticatedUserId, score)
+                                            }
+                                        }
+                                        for (impact in localImpactLogs) {
+                                            migrateRecord("impact history") {
+                                                cloudRepository.saveImpactLog(authenticatedUserId, impact)
+                                            }
+                                        }
+
                                         cloudReadyUserId = authenticatedUserId
-                                        _dataSyncStatus.value = "Cloud data synced"
+                                        _dataSyncStatus.value = if (syncFailures.isEmpty()) {
+                                            "Cloud data synced"
+                                        } else {
+                                            "History kept on device; cloud migration incomplete: " +
+                                                syncFailures.distinct().joinToString("; ")
+                                        }
                                     } catch (error: Exception) {
                                         val activeProfile = repository.userProfile.value
                                         if (
