@@ -56,6 +56,10 @@ class SupabaseDataRepository {
             .map { it.toModel() }
             .sortedByDescending { it.timestamp }
 
+        val battles = loadCommunityBattles()
+        val userLeaderboard = loadUserLeaderboard()
+        val cityLeaderboard = loadCityLeaderboard()
+
         return SupabaseUserSnapshot(
             profile = profile.toModel(email),
             householdDna = household,
@@ -63,7 +67,10 @@ class SupabaseDataRepository {
             experiments = experiments.map { it.toModel() },
             dailyChecks = dailyChecks.map { RemoteDailyCheck(it.experimentId, it.toModel()) },
             gameScores = games,
-            impactLogs = impacts
+            impactLogs = impacts,
+            communityBattles = battles,
+            cityLeaderboard = cityLeaderboard,
+            userLeaderboard = userLeaderboard
         )
     }
 
@@ -74,7 +81,8 @@ class SupabaseDataRepository {
             ProfileWriteRow(
                 displayName = profile.displayName,
                 city = profile.city,
-                onboardingCompleted = profile.onboardingCompleted
+                onboardingCompleted = profile.onboardingCompleted,
+                leaderboardVisible = profile.leaderboardVisible
             )
         ) {
             filter {
@@ -88,6 +96,40 @@ class SupabaseDataRepository {
             .select { filter { eq("id", userId) } }
             .decodeSingle<ProfileDbRow>()
         return profile.toModel(email)
+    }
+
+    suspend fun loadCommunityBattles(): List<CommunityBattle> =
+        client.postgrest.rpc("get_community_battles")
+            .decodeList<CommunityBattleDbRow>()
+            .map { it.toModel() }
+
+    suspend fun loadUserLeaderboard(): List<UserLeaderboardEntry> =
+        client.postgrest.rpc(
+            "get_user_leaderboard",
+            buildJsonObject { put("p_limit", 50) }
+        ).decodeList<UserLeaderboardDbRow>().map { it.toModel() }
+
+    suspend fun loadCityLeaderboard(): List<CityLeaderboardEntry> =
+        client.postgrest.rpc(
+            "get_city_leaderboard",
+            buildJsonObject { put("p_limit", 50) }
+        ).decodeList<CityLeaderboardDbRow>().map { it.toModel() }
+
+    suspend fun joinCommunityBattle(battleId: String) {
+        client.postgrest.rpc(
+            "join_community_battle",
+            buildJsonObject { put("p_battle_id", battleId) }
+        )
+    }
+
+    suspend fun contributeToCommunityBattle(battleId: String, amount: Double) {
+        client.postgrest.rpc(
+            "contribute_to_community_battle",
+            buildJsonObject {
+                put("p_battle_id", battleId)
+                put("p_amount", amount)
+            }
+        )
     }
 
     suspend fun purchaseAvatar(avatarName: String) {
@@ -233,7 +275,10 @@ data class SupabaseUserSnapshot(
     val experiments: List<RemoteExperimentState>,
     val dailyChecks: List<RemoteDailyCheck>,
     val gameScores: List<MiniGameResult>,
-    val impactLogs: List<ProofOfImpact>
+    val impactLogs: List<ProofOfImpact>,
+    val communityBattles: List<CommunityBattle>,
+    val cityLeaderboard: List<CityLeaderboardEntry>,
+    val userLeaderboard: List<UserLeaderboardEntry>
 )
 
 data class RemoteDailyCheck(
@@ -328,6 +373,80 @@ private fun ImpactLogDbRow.toModel() = ProofOfImpact(
 )
 
 @Serializable
+private data class CommunityBattleDbRow(
+    @SerialName("battle_id") val battleId: String,
+    val title: String,
+    val subtitle: String,
+    val region: String,
+    @SerialName("target_goal") val targetGoal: String,
+    @SerialName("current_metric") val currentMetric: Double,
+    @SerialName("target_metric") val targetMetric: Double,
+    @SerialName("metric_unit") val metricUnit: String,
+    @SerialName("participants_count") val participantsCount: Long,
+    @SerialName("days_left") val daysLeft: Int,
+    @SerialName("is_joined") val isJoined: Boolean,
+    @SerialName("user_contribution") val userContribution: Double,
+    @SerialName("reward_points") val rewardPoints: Int
+)
+
+@Serializable
+private data class UserLeaderboardDbRow(
+    val rank: Long,
+    @SerialName("display_name") val displayName: String,
+    val city: String,
+    @SerialName("selected_avatar") val selectedAvatar: String,
+    @SerialName("eco_points") val ecoPoints: Int,
+    @SerialName("actions_count") val actionsCount: Long,
+    @SerialName("is_current_user") val isCurrentUser: Boolean
+)
+
+@Serializable
+private data class CityLeaderboardDbRow(
+    val rank: Long,
+    @SerialName("city_name") val cityName: String,
+    @SerialName("active_citizens") val activeCitizens: Long,
+    @SerialName("total_kwh_saved") val totalKwhSaved: Double,
+    @SerialName("eco_points_total") val ecoPointsTotal: Long,
+    @SerialName("is_user_city") val isUserCity: Boolean
+)
+
+private fun CommunityBattleDbRow.toModel() = CommunityBattle(
+    id = battleId,
+    title = title,
+    subtitle = subtitle,
+    region = region,
+    targetGoal = targetGoal,
+    currentMetric = currentMetric,
+    targetMetric = targetMetric,
+    metricUnit = metricUnit,
+    participantsCount = participantsCount.toInt(),
+    daysLeft = daysLeft,
+    isJoined = isJoined,
+    userContribution = userContribution,
+    rewardPoints = rewardPoints
+)
+
+private fun UserLeaderboardDbRow.toModel() = UserLeaderboardEntry(
+    rank = rank.toInt(),
+    name = displayName,
+    city = city,
+    avatar = selectedAvatar,
+    ecoPoints = ecoPoints,
+    actionsCount = actionsCount.toInt(),
+    isCurrentUser = isCurrentUser
+)
+
+private fun CityLeaderboardDbRow.toModel() = CityLeaderboardEntry(
+    rank = rank.toInt(),
+    cityName = cityName,
+    state = "India",
+    activeCitizens = activeCitizens.toInt(),
+    totalKwhSaved = totalKwhSaved,
+    ecoPointsTotal = ecoPointsTotal.toInt(),
+    isUserCity = isUserCity
+)
+
+@Serializable
 private data class ProfileDbRow(
     val id: String,
     @SerialName("display_name") val displayName: String? = null,
@@ -336,14 +455,16 @@ private data class ProfileDbRow(
     @SerialName("selected_avatar") val selectedAvatar: String? = null,
     @SerialName("unlocked_avatars") val unlockedAvatars: List<String>? = null,
     @SerialName("eco_points") val ecoPoints: Int = 0,
-    @SerialName("eco_credits") val ecoCredits: Int = 0
+    @SerialName("eco_credits") val ecoCredits: Int = 0,
+    @SerialName("leaderboard_visible") val leaderboardVisible: Boolean = false
 )
 
 @Serializable
 private data class ProfileWriteRow(
     @SerialName("display_name") val displayName: String,
     val city: String,
-    @SerialName("onboarding_completed") val onboardingCompleted: Boolean
+    @SerialName("onboarding_completed") val onboardingCompleted: Boolean,
+    @SerialName("leaderboard_visible") val leaderboardVisible: Boolean
 )
 
 @Serializable
