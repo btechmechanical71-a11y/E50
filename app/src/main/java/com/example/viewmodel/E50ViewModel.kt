@@ -217,7 +217,10 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                             footprints = mergedFootprints,
                                             experiments = mergedExperiments,
                                             gameScores = mergedGameScores,
-                                            impactLogs = mergedImpactLogs
+                                            impactLogs = mergedImpactLogs,
+                                            communityBattles = snapshot.communityBattles,
+                                            cityLeaderboard = snapshot.cityLeaderboard,
+                                            userLeaderboard = snapshot.userLeaderboard
                                         )
 
                                         // One-time backfill: make locally retained user records durable in
@@ -511,6 +514,8 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
     val communityBattles: StateFlow<List<CommunityBattle>> = repository.communityBattles
     val impactLogs: StateFlow<List<ProofOfImpact>> = repository.impactLogs
     val gameScores: StateFlow<List<MiniGameResult>> = repository.gameScores
+    val cityLeaderboard: StateFlow<List<CityLeaderboardEntry>> = repository.cityLeaderboard
+    val userLeaderboard: StateFlow<List<UserLeaderboardEntry>> = repository.userLeaderboard
 
     private fun launchCloudSync(label: String, operation: suspend (String) -> Unit) {
         val userId = cloudReadyUserId ?: return
@@ -691,12 +696,65 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private suspend fun refreshCommunityData(userId: String) {
+        if (cloudReadyUserId != userId) return
+        val battles = cloudRepository.loadCommunityBattles()
+        val users = cloudRepository.loadUserLeaderboard()
+        val cities = cloudRepository.loadCityLeaderboard()
+        val activeProfile = repository.userProfile.value
+        if (cloudReadyUserId == userId &&
+            activeProfile.isSignedIn &&
+            !activeProfile.isGuest &&
+            activeProfile.id == userId
+        ) {
+            repository.updateCommunityData(battles, cities, users)
+        }
+    }
+
     fun joinBattle(battleId: String) {
-        repository.joinCommunityBattle(battleId)
+        val userId = cloudReadyUserId ?: run {
+            _dataSyncStatus.value = "Sign in to join a community battle"
+            return
+        }
+        viewModelScope.launch {
+            try {
+                cloudRepository.joinCommunityBattle(battleId)
+                refreshRewardProfile(userId)
+                refreshCommunityData(userId)
+                _dataSyncStatus.value = "Community battle participation saved to cloud"
+            } catch (error: Exception) {
+                _dataSyncStatus.value = "Could not join community battle: ${error.message ?: "unknown error"}"
+            }
+        }
     }
 
     fun contributeToBattle(battleId: String, amount: Double) {
-        repository.recordBattleContribution(battleId, amount)
+        val userId = cloudReadyUserId ?: run {
+            _dataSyncStatus.value = "Sign in to record a community contribution"
+            return
+        }
+        if (!amount.isFinite() || amount <= 0.0 || amount > 100.0) {
+            _dataSyncStatus.value = "Contribution must be greater than 0 and at most 100"
+            return
+        }
+        viewModelScope.launch {
+            try {
+                cloudRepository.contributeToCommunityBattle(battleId, amount)
+                refreshCommunityData(userId)
+                _dataSyncStatus.value = "Community contribution saved (self-reported, not reward-eligible)"
+            } catch (error: Exception) {
+                _dataSyncStatus.value = "Could not save community contribution: ${error.message ?: "unknown error"}"
+            }
+        }
+    }
+
+    fun setLeaderboardVisibility(visible: Boolean) {
+        repository.setLeaderboardVisibility(visible)
+        launchCloudSync("leaderboard privacy setting") { userId ->
+            cloudRepository.saveProfile(repository.userProfile.value.copy(id = userId))
+            refreshRewardProfile(userId)
+            refreshCommunityData(userId)
+        }
     }
 
     fun logProofOfImpact(impact: ProofOfImpact) {
