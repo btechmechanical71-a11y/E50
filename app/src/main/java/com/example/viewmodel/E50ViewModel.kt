@@ -107,18 +107,11 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                         }
 
                         is SessionStatus.NotAuthenticated -> {
-                            if (!repository.userProfile.value.isGuest) {
+                            if (!repository.userProfile.value.isGuest && !_authUiState.value.isPasswordRecovery) {
                                 repository.signOutUser()
-                                if (!_authUiState.value.isPasswordRecovery) {
-                                    navigationBackStack.clear()
-                                    navigationBackStack.add(AppScreen.Landing)
-                                    _currentScreen.value = AppScreen.Landing
-                                } else {
-                                    _authUiState.value = _authUiState.value.copy(
-                                        isLoading = false,
-                                        error = "The password reset link could not be verified. Request a new link."
-                                    )
-                                }
+                                navigationBackStack.clear()
+                                navigationBackStack.add(AppScreen.Landing)
+                                _currentScreen.value = AppScreen.Landing
                             }
                         }
 
@@ -234,6 +227,12 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                 SupabaseClientProvider.client.auth.updateUser {
                     password = newPassword
                 }
+                // Clear recovery mode before sign-out so the session observer does not treat
+                // the intentional logout as a failed recovery callback.
+                _authUiState.value = AuthUiState(
+                    isLoading = true,
+                    message = "Password updated. Returning to sign-in..."
+                )
                 SupabaseClientProvider.client.auth.signOut()
                 _authUiState.value = AuthUiState(
                     message = "Password updated successfully. Sign in with your new password."
@@ -299,15 +298,14 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         return repository.getUserLeaderboard()
     }
 
-    // Local guest entry remains available; real accounts must use Supabase Auth.
+    // Used for guest entry and updating the locally displayed profile fields.
+    // Email/password authentication is handled only by signInWithEmail().
     fun signIn(email: String, name: String, city: String, isGuest: Boolean) {
-        if (!isGuest) return
-
         repository.loginUser(
-            email = email.ifBlank { "guest@e50.in" },
-            name = name.ifBlank { "Guest Citizen" },
+            email = email.ifBlank { if (isGuest) "guest@e50.in" else repository.userProfile.value.email },
+            name = name.ifBlank { if (isGuest) "Guest Citizen" else "Eco Citizen" },
             city = city.ifBlank { "Ahmedabad" },
-            isGuest = true
+            isGuest = isGuest
         )
         navigationBackStack.clear()
         navigationBackStack.add(AppScreen.Dashboard)
