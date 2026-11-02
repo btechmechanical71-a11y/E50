@@ -282,7 +282,7 @@ fun GameGreenCityScreen(
                 normalizedScore >= 60 -> "Gold Sustainable Town 🥇"
                 else -> "Silver Developing District 🥈"
             }
-            val creditsEarned = normalizedScore * 3
+            val creditsEarned = 10
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -337,7 +337,7 @@ fun GameGreenCityScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text("Virtual Gameplay Reward", fontSize = 12.sp, color = DeepTeal, fontWeight = FontWeight.SemiBold)
-                            Text("+ $creditsEarned EcoCredits ⚡", fontSize = 24.sp, fontWeight = FontWeight.Black, color = FreshGreen)
+                            Text("Up to $creditsEarned EcoCredits ⚡ (daily game limit)", fontSize = 24.sp, fontWeight = FontWeight.Black, color = FreshGreen)
                         }
                     }
 
@@ -363,7 +363,7 @@ fun GameGreenCityScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp).testTag("citybuilder_claim_button")
                     ) {
-                        Text(if (isClaimed) "EcoCredits Claimed ✓" else "Claim $creditsEarned EcoCredits & Save Plan", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(if (isClaimed) "EcoCredits Claimed ✓" else "Claim Daily EcoCredits Reward & Save Plan", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
