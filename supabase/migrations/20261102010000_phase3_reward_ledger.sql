@@ -179,7 +179,7 @@ as $$
 begin
     perform private.apply_reward_event(
         new.user_id,
-        'footprint:' || new.year::text || ':' || lower(trim(new.month_name)),
+        'footprint-reward:' || to_char(timezone('UTC', now()), 'YYYY-MM'),
         'FOOTPRINT_ENTRY',
         15,
         0,
@@ -195,8 +195,37 @@ create trigger trg_reward_footprint_insert
     after insert on public.footprint_entries
     for each row execute function private.reward_footprint_insert();
 
--- A daily check only earns points when an existing check changes false -> true.
--- Inserts/backfills of pre-completed demo rows do not mint points.
+-- Server timestamps daily completions; client date_string is display metadata only.
+alter table public.daily_checks
+    add column if not exists completed_at timestamptz;
+
+create or replace function private.stamp_daily_check_completion()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+    if new.completed is true then
+        if tg_op = 'INSERT' then
+            new.completed_at := now();
+        elsif old.completed is false then
+            new.completed_at := now();
+        end if;
+    else
+        new.completed_at := null;
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_stamp_daily_check_completion on public.daily_checks;
+create trigger trg_stamp_daily_check_completion
+    before insert or update on public.daily_checks
+    for each row execute function private.stamp_daily_check_completion();
+
+-- A real completion transition earns at most one daily reward per UTC day.
+-- The seven-day bonus requires seven different server completion dates.
 create or replace function private.reward_daily_check_completion()
 returns trigger
 language plpgsql
@@ -204,32 +233,43 @@ security definer
 set search_path = ''
 as $$
 declare
+    v_just_completed boolean := false;
     v_completed_count integer;
+    v_distinct_days integer;
     v_bonus_points integer;
+    v_utc_day text := (timezone('UTC', now())::date)::text;
 begin
-    if old.completed is false and new.completed is true then
+    if tg_op = 'INSERT' then
+        v_just_completed := new.completed is true;
+    else
+        v_just_completed := old.completed is false and new.completed is true;
+    end if;
+
+    if v_just_completed and new.completed_at is not null then
         perform private.apply_reward_event(
             new.user_id,
-            'daily-check:' || new.experiment_id || ':' || new.day_number::text,
+            'daily-check-daily:' || v_utc_day,
             'DAILY_CHECK',
             10,
             0,
-            'Completed an experiment daily check',
+            'Completed an experiment daily check (daily limit)',
             jsonb_build_object(
                 'experiment_id', new.experiment_id,
                 'day_number', new.day_number
             )
         );
 
-        select count(*)
-        into v_completed_count
+        select
+            count(*) filter (where completed_at is not null),
+            count(distinct (completed_at at time zone 'UTC')::date)
+        into v_completed_count, v_distinct_days
         from public.daily_checks
         where user_id = new.user_id
           and experiment_id = new.experiment_id
           and completed is true
           and day_number between 1 and 7;
 
-        if v_completed_count >= 7 then
+        if v_completed_count >= 7 and v_distinct_days >= 7 then
             select bonus_points
             into v_bonus_points
             from private.experiment_reward_catalog
@@ -255,7 +295,7 @@ $$;
 
 drop trigger if exists trg_reward_daily_check_completion on public.daily_checks;
 create trigger trg_reward_daily_check_completion
-    after update of completed on public.daily_checks
+    after insert or update on public.daily_checks
     for each row execute function private.reward_daily_check_completion();
 
 -- Impact entries are self-reported. Reward at most one impact submission per user per UTC day.
