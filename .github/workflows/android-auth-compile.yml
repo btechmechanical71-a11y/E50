@@ -6,6 +6,10 @@ on:
       - phase-1-supabase-auth
   workflow_dispatch:
 
+concurrency:
+  group: android-auth-compile-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
