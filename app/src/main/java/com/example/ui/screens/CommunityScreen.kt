@@ -127,7 +127,7 @@ fun CommunityScreen(
             ) {
                 Text("ℹ️", fontSize = 14.sp)
                 Text(
-                    text = "Live community data from E50 Cloud. Citizen rankings are opt-in; your own profile is always visible to you.",
+                    text = "Signed-in citizens see live E50 Cloud data. Leaderboards are opt-in. Contributions are self-reported and are not independently verified.",
                     fontSize = 11.sp,
                     color = DeepTeal.copy(alpha = 0.85f),
                     lineHeight = 15.sp
