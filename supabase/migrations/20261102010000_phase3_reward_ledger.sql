@@ -168,7 +168,7 @@ revoke all on function private.apply_reward_event(
 -- mark onboarding as skipped. This avoids rewarding a client-controlled skip.
 -- Activity rewards below are issued only by server-side event triggers.
 
--- A newly inserted monthly electricity record earns 15 points once.
+-- A newly inserted electricity record earns 15 points at most once per current UTC month.
 -- Updating an existing month cannot mint another reward.
 create or replace function private.reward_footprint_insert()
 returns trigger
@@ -206,16 +206,24 @@ security definer
 set search_path = ''
 as $$
 begin
-    if tg_op = 'UPDATE' and old.completed is true then
-        if new.completed is false then
-            raise exception 'A completed daily check cannot be reset';
+    if tg_op = 'INSERT' then
+        if new.completed is true then
+            new.completed_at := now();
+        else
+            new.completed_at := null;
         end if;
-        -- Never accept a client-supplied replacement timestamp.
-        new.completed_at := old.completed_at;
-    elsif new.completed is true then
-        new.completed_at := now();
     else
-        new.completed_at := null;
+        if old.completed is true then
+            if new.completed is false then
+                raise exception 'A completed daily check cannot be reset';
+            end if;
+            -- Never accept a client-supplied replacement timestamp.
+            new.completed_at := old.completed_at;
+        elsif new.completed is true then
+            new.completed_at := now();
+        else
+            new.completed_at := null;
+        end if;
     end if;
     return new;
 end;
