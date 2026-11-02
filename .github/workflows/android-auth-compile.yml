@@ -44,17 +44,27 @@ jobs:
           fi
           printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" > .env
 
-      - name: Generate temporary debug signing keystore
+      - name: Restore stable E50 Cloud signing key
+        uses: actions/cache@v4
+        with:
+          path: debug.keystore
+          key: e50-cloud-debug-signing-v1
+
+      - name: Generate stable E50 Cloud signing key when needed
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=E50 Cloud Debug,O=E50,C=IN"
+          else
+            echo "Restored the persistent E50 Cloud signing key."
+          fi
 
       - name: Build debug APK
         run: gradle :app:assembleDebug
