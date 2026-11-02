@@ -1,4 +1,4 @@
-name: Android Auth Compile Check
+name: Android Auth Build Check
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   compile:
-    name: Compile Android app
+    name: Build Android debug APK
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -43,5 +43,13 @@ jobs:
           fi
           printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" > .env
 
-      - name: Compile debug Kotlin
-        run: gradle :app:compileDebugKotlin
+      - name: Build debug APK
+        run: gradle :app:assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: E50-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
