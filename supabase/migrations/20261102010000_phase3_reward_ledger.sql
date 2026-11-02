@@ -177,15 +177,22 @@ security definer
 set search_path = ''
 as $$
 begin
-    perform private.apply_reward_event(
-        new.user_id,
-        'footprint-reward:' || to_char(timezone('UTC', now()), 'YYYY-MM'),
-        'FOOTPRINT_ENTRY',
-        15,
-        0,
-        'Logged monthly electricity reading',
-        jsonb_build_object('month', new.month_name, 'year', new.year)
-    );
+    if new.kwh > 0
+       and new.bill_amount >= 0
+       and new.month_name = any(array[
+           'January', 'February', 'March', 'April', 'May', 'June',
+           'July', 'August', 'September', 'October', 'November', 'December'
+       ]::text[]) then
+        perform private.apply_reward_event(
+            new.user_id,
+            'footprint-reward:' || to_char(timezone('UTC', now()), 'YYYY-MM'),
+            'FOOTPRINT_ENTRY',
+            15,
+            0,
+            'Logged monthly electricity reading',
+            jsonb_build_object('month', new.month_name, 'year', new.year)
+        );
+    end if;
     return new;
 end;
 $$;
@@ -318,15 +325,17 @@ as $$
 declare
     v_utc_day text := (timezone('UTC', now())::date)::text;
 begin
-    perform private.apply_reward_event(
-        new.user_id,
-        'impact-daily:' || v_utc_day,
-        'IMPACT_LOG',
-        25,
-        0,
-        'Submitted an impact log (daily reward limit)',
-        jsonb_build_object('impact_id', new.id)
-    );
+    if length(trim(new.title)) >= 3 and new.estimated_kwh_saved > 0 then
+        perform private.apply_reward_event(
+            new.user_id,
+            'impact-daily:' || v_utc_day,
+            'IMPACT_LOG',
+            25,
+            0,
+            'Submitted an impact log (daily reward limit)',
+            jsonb_build_object('impact_id', new.id)
+        );
+    end if;
     return new;
 end;
 $$;
@@ -355,19 +364,21 @@ as $$
 declare
     v_utc_day text := (timezone('UTC', now())::date)::text;
 begin
-    perform private.apply_reward_event(
-        new.user_id,
-        'game-daily:' || new.game_type || ':' || v_utc_day,
-        'GAME_DAILY_REWARD',
-        0,
-        10,
-        'First game completion reward for this game type today',
-        jsonb_build_object(
-            'game_type', new.game_type,
-            'game_score_id', new.id,
-            'reported_credits_ignored', new.reported_eco_credits
-        )
-    );
+    if new.score > 0 and new.accuracy_percent > 0 then
+        perform private.apply_reward_event(
+            new.user_id,
+            'game-daily:' || new.game_type || ':' || v_utc_day,
+            'GAME_DAILY_REWARD',
+            0,
+            10,
+            'First positive-score game completion reward for this game type today',
+            jsonb_build_object(
+                'game_type', new.game_type,
+                'game_score_id', new.id,
+                'reported_credits_ignored', new.reported_eco_credits
+            )
+        );
+    end if;
     return new;
 end;
 $$;
