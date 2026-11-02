@@ -96,7 +96,7 @@ fun ProfileScreen(
                 )
 
                 Text(
-                    text = "${userProfile.city}, Gujarat • ${userProfile.email}",
+                    text = "${userProfile.city} • ${userProfile.email}",
                     fontSize = 12.sp,
                     color = DeepTeal.copy(alpha = 0.7f)
                 )
