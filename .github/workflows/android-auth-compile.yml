@@ -6,6 +6,7 @@ on:
       - phase-1-supabase-auth
       - phase-2-database
       - phase-3-rewards
+      - phase-4-integration
   workflow_dispatch:
 
 concurrency:
