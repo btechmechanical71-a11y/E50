@@ -436,7 +436,8 @@ class E50Repository(context: Context) {
             ecoPoints = profile.ecoPoints,
             ecoCredits = profile.ecoCredits,
             selectedAvatar = profile.selectedAvatar,
-            unlockedAvatars = profile.unlockedAvatars
+            unlockedAvatars = profile.unlockedAvatars,
+            leaderboardVisible = profile.leaderboardVisible
         )
         checkAchievements()
         saveToStorage()
