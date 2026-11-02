@@ -128,6 +128,26 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun friendlyAuthError(error: Throwable, fallback: String): String {
+        val details = generateSequence(error) { it.cause }
+            .mapNotNull { it.message }
+            .joinToString(" ")
+            .lowercase()
+
+        return when {
+            "over_email_send_rate_limit" in details || "email rate limit exceeded" in details ->
+                "Supabase's built-in email service is limited to 2 emails per hour across this project. Wait for the limit to reset, or configure custom SMTP in Supabase Authentication > SMTP Settings."
+
+            "email_address_not_authorized" in details ->
+                "Supabase's built-in email service can only send to members of your Supabase organization. Configure custom SMTP to send to other email addresses."
+
+            "over_request_rate_limit" in details ->
+                "Too many authentication requests were made. Please wait a few minutes and try again."
+
+            else -> fallback
+        }
+    }
+
     fun signUpWithEmail(email: String, password: String, name: String, city: String) {
         if (!SupabaseClientProvider.isConfigured) {
             _authUiState.value = AuthUiState(error = "Supabase credentials are not configured.")
@@ -154,7 +174,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (error: Exception) {
                 _authUiState.value = AuthUiState(
-                    error = error.message ?: "Signup failed. Please try again."
+                    error = friendlyAuthError(error, "Signup failed. Please try again.")
                 )
             }
         }
@@ -176,7 +196,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                 _authUiState.value = AuthUiState()
             } catch (error: Exception) {
                 _authUiState.value = AuthUiState(
-                    error = error.message ?: "Login failed. Check your email and password."
+                    error = friendlyAuthError(error, "Login failed. Check your email and password.")
                 )
             }
         }
@@ -200,7 +220,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                 )
             } catch (error: Exception) {
                 _authUiState.value = AuthUiState(
-                    error = error.message ?: "Could not send the password reset email."
+                    error = friendlyAuthError(error, "Could not send the password reset email.")
                 )
             }
         }
