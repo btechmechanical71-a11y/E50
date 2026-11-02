@@ -206,12 +206,14 @@ security definer
 set search_path = ''
 as $$
 begin
-    if new.completed is true then
-        if tg_op = 'INSERT' then
-            new.completed_at := now();
-        elsif old.completed is false then
-            new.completed_at := now();
+    if tg_op = 'UPDATE' and old.completed is true then
+        if new.completed is false then
+            raise exception 'A completed daily check cannot be reset';
         end if;
+        -- Never accept a client-supplied replacement timestamp.
+        new.completed_at := old.completed_at;
+    elsif new.completed is true then
+        new.completed_at := now();
     else
         new.completed_at := null;
     end if;
