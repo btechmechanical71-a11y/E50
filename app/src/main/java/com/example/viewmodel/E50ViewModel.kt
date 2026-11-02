@@ -101,10 +101,21 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                 userId = user?.id
                             )
 
+                            if (_authUiState.value.isPasswordRecovery) {
+                                _authUiState.value = _authUiState.value.copy(
+                                    isLoading = false,
+                                    message = "Your reset link is verified. Enter a new password."
+                                )
+                                navigateTo(AppScreen.Auth)
+                            }
+
                             val authenticatedUserId = user?.id
-                            if (
+                            if (authenticatedUserId != null && cloudReadyUserId == authenticatedUserId) {
+                                if (!_authUiState.value.isPasswordRecovery) {
+                                    navigateAfterCloudLoad()
+                                }
+                            } else if (
                                 authenticatedUserId != null &&
-                                cloudReadyUserId != authenticatedUserId &&
                                 cloudLoadingUserId != authenticatedUserId
                             ) {
                                 cloudLoadingUserId = authenticatedUserId
@@ -155,21 +166,11 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                         if (cloudLoadingUserId == authenticatedUserId) {
                                             cloudLoadingUserId = null
                                         }
+                                        if (!_authUiState.value.isPasswordRecovery) {
+                                            navigateAfterCloudLoad()
+                                        }
                                     }
                                 }
-                            }
-
-                            if (_authUiState.value.isPasswordRecovery) {
-                                _authUiState.value = _authUiState.value.copy(
-                                    isLoading = false,
-                                    message = "Your reset link is verified. Enter a new password."
-                                )
-                                navigateTo(AppScreen.Auth)
-                            } else {
-                                _authUiState.value = AuthUiState()
-                                navigationBackStack.clear()
-                                navigationBackStack.add(AppScreen.Dashboard)
-                                _currentScreen.value = AppScreen.Dashboard
                             }
                         }
 
@@ -193,6 +194,18 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+    }
+
+    private fun navigateAfterCloudLoad() {
+        val destination = if (repository.userProfile.value.onboardingCompleted) {
+            AppScreen.Dashboard
+        } else {
+            AppScreen.Onboarding
+        }
+        _authUiState.value = AuthUiState()
+        navigationBackStack.clear()
+        navigationBackStack.add(destination)
+        _currentScreen.value = destination
     }
 
     private fun friendlyAuthError(error: Throwable, fallback: String): String {
