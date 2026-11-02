@@ -2,8 +2,11 @@ package com.example.data
 
 import com.example.data.model.*
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Cloud persistence for records owned by the currently authenticated Supabase user.
@@ -65,20 +68,41 @@ class SupabaseDataRepository {
     }
 
     suspend fun saveProfile(profile: UserProfile) {
-        // Auth trigger/backfill guarantees the row exists; update only allowed profile fields.
+        // Rewards and avatar state are server-owned in Phase 3; the app may
+        // update only ordinary profile fields.
         client.from("profiles").update(
             ProfileWriteRow(
                 displayName = profile.displayName,
                 city = profile.city,
-                onboardingCompleted = profile.onboardingCompleted,
-                selectedAvatar = profile.selectedAvatar,
-                unlockedAvatars = profile.unlockedAvatars
+                onboardingCompleted = profile.onboardingCompleted
             )
         ) {
             filter {
                 eq("id", profile.id)
             }
         }
+    }
+
+    suspend fun loadRewardProfile(userId: String, email: String): UserProfile {
+        val profile = client.from("profiles")
+            .select { filter { eq("id", userId) } }
+            .decodeSingle<ProfileDbRow>()
+        return profile.toModel(email)
+    }
+
+    suspend fun purchaseAvatar(avatarName: String) {
+        // Price, balance check, purchase and unlock all happen in one database transaction.
+        client.postgrest.rpc(
+            "purchase_avatar",
+            buildJsonObject { put("p_avatar_name", avatarName) }
+        )
+    }
+
+    suspend fun selectAvatar(avatarName: String) {
+        client.postgrest.rpc(
+            "select_avatar",
+            buildJsonObject { put("p_avatar_name", avatarName) }
+        )
     }
 
     suspend fun saveHouseholdDna(userId: String, dna: HouseholdDna) {
@@ -319,9 +343,7 @@ private data class ProfileDbRow(
 private data class ProfileWriteRow(
     @SerialName("display_name") val displayName: String,
     val city: String,
-    @SerialName("onboarding_completed") val onboardingCompleted: Boolean,
-    @SerialName("selected_avatar") val selectedAvatar: String,
-    @SerialName("unlocked_avatars") val unlockedAvatars: List<String>
+    @SerialName("onboarding_completed") val onboardingCompleted: Boolean
 )
 
 @Serializable
