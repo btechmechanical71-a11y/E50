@@ -389,7 +389,7 @@ private fun CityRankRow(city: CityLeaderboardEntry) {
                             }
                         }
                     }
-                    Text("${city.activeCitizens} citizens • ${String.format(Locale.US, "%.0f", city.totalKwhSaved)} kWh reported", fontSize = 11.sp, color = DeepTeal.copy(alpha = 0.7f))
+                    Text("${city.activeCitizens} opted-in citizens • ${String.format(Locale.US, "%.0f", city.totalKwhSaved)} kWh reported", fontSize = 11.sp, color = DeepTeal.copy(alpha = 0.7f))
                 }
             }
 
