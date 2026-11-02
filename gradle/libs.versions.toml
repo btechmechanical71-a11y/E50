@@ -40,8 +40,8 @@ secretsGradlePlugin = "2.0.1"
 googleServices = "4.5.0"
 credentials = "1.5.0"
 googleid = "1.1.1"
-supabase = "3.8.0"
-ktor = "3.6.1"
+supabase = "3.2.2"
+ktor = "3.2.2"
 desugarJdkLibs = "2.1.5"
 
 
