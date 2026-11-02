@@ -315,7 +315,7 @@ fun OnboardingScreen(
                 .testTag("onboarding_complete_button")
         ) {
             Text(
-                "Save Energy DNA & Earn 50 EcoPoints",
+                "Save Energy DNA & Continue",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = Color.White
