@@ -1,13 +1,14 @@
-name: Android Auth Build Check
+name: E50 Android Build Check
 
 on:
   push:
     branches:
       - phase-1-supabase-auth
+      - phase-2-database
   workflow_dispatch:
 
 concurrency:
-  group: android-auth-compile-${{ github.ref }}
+  group: e50-android-build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
