@@ -154,7 +154,7 @@ class SupabaseDataRepository {
         }
         if (checks.isNotEmpty()) {
             client.from("daily_checks").upsert(
-                checks,
+                checks
             ) {
                 onConflict = "user_id,experiment_id,day_number"
             }
@@ -194,10 +194,11 @@ class SupabaseDataRepository {
                 photoNote = impact.photoNote,
                 timestampMs = impact.timestamp,
                 status = impact.status
-            ),
-            onConflict = "user_id,id",
+            )
+        ) {
+            onConflict = "user_id,id"
             ignoreDuplicates = true
-        )
+        }
     }
 }
 
