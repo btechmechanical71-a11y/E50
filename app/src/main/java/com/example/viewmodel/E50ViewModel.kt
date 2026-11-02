@@ -455,6 +455,12 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         navigateTo(AppScreen.Dashboard)
     }
 
+    fun skipOnboarding() {
+        repository.skipOnboarding()
+        syncProfile()
+        navigateTo(AppScreen.Dashboard)
+    }
+
     fun updateHouseholdDna(dna: HouseholdDna) {
         repository.updateHouseholdDna(dna)
         syncHouseholdDna()
