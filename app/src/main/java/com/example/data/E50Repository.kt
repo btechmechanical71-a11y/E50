@@ -32,6 +32,12 @@ class E50Repository(context: Context) {
     private val _communityBattles = MutableStateFlow<List<CommunityBattle>>(emptyList())
     val communityBattles: StateFlow<List<CommunityBattle>> = _communityBattles.asStateFlow()
 
+    private val _cityLeaderboard = MutableStateFlow<List<CityLeaderboardEntry>>(emptyList())
+    val cityLeaderboard: StateFlow<List<CityLeaderboardEntry>> = _cityLeaderboard.asStateFlow()
+
+    private val _userLeaderboard = MutableStateFlow<List<UserLeaderboardEntry>>(emptyList())
+    val userLeaderboard: StateFlow<List<UserLeaderboardEntry>> = _userLeaderboard.asStateFlow()
+
     private val _impactLogs = MutableStateFlow<List<ProofOfImpact>>(emptyList())
     val impactLogs: StateFlow<List<ProofOfImpact>> = _impactLogs.asStateFlow()
 
@@ -199,7 +205,9 @@ class E50Repository(context: Context) {
             _householdDna.value = HouseholdDna()
             _footprintEntries.value = emptyList()
             _experiments.value = getDefaultExperiments()
-            _communityBattles.value = getDefaultCommunityBattles()
+            _communityBattles.value = emptyList()
+            _cityLeaderboard.value = emptyList()
+            _userLeaderboard.value = emptyList()
             _impactLogs.value = emptyList()
             _gameScores.value = emptyList()
         }
@@ -224,7 +232,10 @@ class E50Repository(context: Context) {
         footprints: List<FootprintEntry>,
         experiments: List<EnergyExperiment>,
         gameScores: List<MiniGameResult>,
-        impactLogs: List<ProofOfImpact>
+        impactLogs: List<ProofOfImpact>,
+        communityBattles: List<CommunityBattle>,
+        cityLeaderboard: List<CityLeaderboardEntry>,
+        userLeaderboard: List<UserLeaderboardEntry>
     ) {
         _userProfile.value = profile.copy(isGuest = false, isSignedIn = true)
         _householdDna.value = dna ?: HouseholdDna()
@@ -232,6 +243,9 @@ class E50Repository(context: Context) {
         _experiments.value = experiments
         _gameScores.value = gameScores
         _impactLogs.value = impactLogs
+        _communityBattles.value = communityBattles
+        _cityLeaderboard.value = cityLeaderboard
+        _userLeaderboard.value = userLeaderboard
         checkAchievements()
         saveToStorage()
     }
@@ -506,59 +520,22 @@ class E50Repository(context: Context) {
         _userProfile.value = _userProfile.value.copy()
     }
 
-    // --- City Leaderboards ---
-    fun getCityLeaderboard(): List<CityLeaderboardEntry> {
-        val userCity = _userProfile.value.city
-        val baseCities = listOf(
-            CityLeaderboardEntry(1, "Ahmedabad", "Gujarat", 14200, 182400.0, 48200, userCity == "Ahmedabad"),
-            CityLeaderboardEntry(2, "Surat", "Gujarat", 11950, 154200.0, 41300, userCity == "Surat"),
-            CityLeaderboardEntry(3, "Vadodara", "Gujarat", 8840, 118000.0, 31900, userCity == "Vadodara"),
-            CityLeaderboardEntry(4, "Rajkot", "Gujarat", 6400, 84200.0, 22700, userCity == "Rajkot"),
-            CityLeaderboardEntry(5, "Gandhinagar", "Gujarat", 5120, 71500.0, 19400, userCity == "Gandhinagar"),
-            CityLeaderboardEntry(6, "Bhavnagar", "Gujarat", 3210, 41200.0, 11800, userCity == "Bhavnagar"),
-            CityLeaderboardEntry(7, "Jamnagar", "Gujarat", 2800, 36500.0, 9900, userCity == "Jamnagar"),
-            CityLeaderboardEntry(8, "Junagadh", "Gujarat", 2150, 28100.0, 7600, userCity == "Junagadh")
-        )
-
-        // If user city is not in Gujarat top list, append it
-        if (baseCities.none { it.cityName.equals(userCity, ignoreCase = true) } && userCity.isNotBlank()) {
-            return baseCities + CityLeaderboardEntry(
-                rank = baseCities.size + 1,
-                cityName = userCity,
-                state = "India",
-                activeCitizens = 1,
-                totalKwhSaved = 25.0,
-                ecoPointsTotal = _userProfile.value.ecoPoints,
-                isUserCity = true
-            )
-        }
-        return baseCities
+    // Community views are populated only from authenticated Supabase RPC results.
+    fun updateCommunityData(
+        battles: List<CommunityBattle>,
+        cities: List<CityLeaderboardEntry>,
+        users: List<UserLeaderboardEntry>
+    ) {
+        _communityBattles.value = battles
+        _cityLeaderboard.value = cities
+        _userLeaderboard.value = users
+        checkAchievements()
+        saveToStorage()
     }
 
-    fun getUserLeaderboard(): List<UserLeaderboardEntry> {
-        val user = _userProfile.value
-        val topUsers = mutableListOf(
-            UserLeaderboardEntry(1, "Devansh Patel", "Ahmedabad", "🌳 Solar Pioneer", 520, 24),
-            UserLeaderboardEntry(2, "Kavita Mehta", "Surat", "⚡ Watt Watcher", 480, 21),
-            UserLeaderboardEntry(3, "Aarav Desai", "Vadodara", "🌱 Eco Champion", 430, 18),
-            UserLeaderboardEntry(4, "Meera Joshi", "Gandhinagar", "🍃 Green Advocate", 390, 16),
-            UserLeaderboardEntry(5, "Rohan Solanki", "Rajkot", "💡 Energy Master", 350, 15)
-        )
-
-        // Inject real user ranked by actual EcoPoints
-        val userEntry = UserLeaderboardEntry(
-            rank = 6,
-            name = user.displayName,
-            city = user.city,
-            avatar = user.selectedAvatar,
-            ecoPoints = user.ecoPoints,
-            actionsCount = _impactLogs.value.size + _footprintEntries.value.size + _experiments.value.sumOf { it.completedDays.size },
-            isCurrentUser = true
-        )
-
-        topUsers.add(userEntry)
-        topUsers.sortByDescending { it.ecoPoints }
-        return topUsers.mapIndexed { index, item -> item.copy(rank = index + 1) }
+    fun setLeaderboardVisibility(visible: Boolean) {
+        _userProfile.value = _userProfile.value.copy(leaderboardVisible = visible)
+        saveToStorage()
     }
 
     // --- Persistence Implementation ---
@@ -591,7 +568,8 @@ class E50Repository(context: Context) {
                     ecoPoints = obj.optInt("ecoPoints", 120),
                     ecoCredits = obj.optInt("ecoCredits", 350),
                     selectedAvatar = obj.optString("selectedAvatar", "🌱 Eco Pioneer"),
-                    unlockedAvatars = if (unlockedList.isEmpty()) listOf("🌱 Eco Pioneer") else unlockedList
+                    unlockedAvatars = if (unlockedList.isEmpty()) listOf("🌱 Eco Pioneer") else unlockedList,
+                    leaderboardVisible = obj.optBoolean("leaderboardVisible", false)
                 )
             }
 
@@ -834,6 +812,7 @@ class E50Repository(context: Context) {
                 val arr = JSONArray()
                 p.unlockedAvatars.forEach { arr.put(it) }
                 put("unlockedAvatars", arr)
+                put("leaderboardVisible", p.leaderboardVisible)
             }
             editor.putString("user_profile", pObj.toString())
 
