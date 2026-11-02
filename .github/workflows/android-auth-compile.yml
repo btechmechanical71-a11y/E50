@@ -1,0 +1,32 @@
+name: Android Auth Compile Check
+
+on:
+  push:
+    branches:
+      - phase-1-supabase-auth
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    name: Compile Android app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Compile debug Kotlin
+        run: gradle :app:compileDebugKotlin
