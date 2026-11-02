@@ -127,7 +127,12 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                             email = email
                                         )
                                         // Ignore a late response if the user switched accounts while it loaded.
-                                        if (repository.userProfile.value.id != authenticatedUserId) {
+                                        val activeProfile = repository.userProfile.value
+                                        if (
+                                            !activeProfile.isSignedIn ||
+                                            activeProfile.isGuest ||
+                                            activeProfile.id != authenticatedUserId
+                                        ) {
                                             return@launch
                                         }
                                         val mergedExperiments = repository.experiments.value.map { local ->
@@ -164,7 +169,12 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                         cloudReadyUserId = authenticatedUserId
                                         _dataSyncStatus.value = "Cloud data synced"
                                     } catch (error: Exception) {
-                                        if (repository.userProfile.value.id == authenticatedUserId) {
+                                        val activeProfile = repository.userProfile.value
+                                        if (
+                                            activeProfile.isSignedIn &&
+                                            !activeProfile.isGuest &&
+                                            activeProfile.id == authenticatedUserId
+                                        ) {
                                             _dataSyncStatus.value =
                                                 "Cloud load failed: ${error.message ?: "unknown error"}"
                                         }
@@ -173,6 +183,8 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                             cloudLoadingUserId = null
                                         }
                                         if (
+                                            repository.userProfile.value.isSignedIn &&
+                                            !repository.userProfile.value.isGuest &&
                                             repository.userProfile.value.id == authenticatedUserId &&
                                             !_authUiState.value.isPasswordRecovery
                                         ) {
