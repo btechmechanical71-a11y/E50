@@ -73,11 +73,11 @@ fun E50App(viewModel: E50ViewModel = viewModel()) {
     val communityBattles by viewModel.communityBattles.collectAsStateWithLifecycle()
     val impactLogs by viewModel.impactLogs.collectAsStateWithLifecycle()
     val gameScores by viewModel.gameScores.collectAsStateWithLifecycle()
+    val cityLeaderboard by viewModel.cityLeaderboard.collectAsStateWithLifecycle()
+    val userLeaderboard by viewModel.userLeaderboard.collectAsStateWithLifecycle()
 
     val recommendations = viewModel.getRecommendations()
     val achievements = viewModel.getAchievements()
-    val cityLeaderboard = viewModel.getCityLeaderboard()
-    val userLeaderboard = viewModel.getUserLeaderboard()
 
     // Handle Android system back gesture / back button
     BackHandler(enabled = currentScreen != AppScreen.Dashboard && currentScreen != AppScreen.Landing) {
@@ -318,6 +318,10 @@ fun E50App(viewModel: E50ViewModel = viewModel()) {
                         userProfile = userProfile,
                         householdDna = householdDna,
                         dataSyncStatus = dataSyncStatus,
+                        leaderboardVisible = userProfile.leaderboardVisible,
+                        onUpdateLeaderboardVisibility = { visible ->
+                            viewModel.setLeaderboardVisibility(visible)
+                        },
                         onBack = { viewModel.navigateBack() },
                         onUpdateProfile = { name, city ->
                             viewModel.updateProfile(name, city)
