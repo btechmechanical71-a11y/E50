@@ -30,6 +30,8 @@ fun ProfileScreen(
     userProfile: UserProfile,
     householdDna: HouseholdDna,
     dataSyncStatus: String,
+    leaderboardVisible: Boolean,
+    onUpdateLeaderboardVisibility: (Boolean) -> Unit,
     onBack: () -> Unit,
     onUpdateProfile: (name: String, city: String) -> Unit,
     onResetData: () -> Unit,
@@ -154,6 +156,39 @@ fun ProfileScreen(
                     Text("Cloud sync", fontWeight = FontWeight.Bold, color = DeepTeal, fontSize = 13.sp)
                     Text(dataSyncStatus, color = DeepTeal.copy(alpha = 0.75f), fontSize = 12.sp)
                 }
+            }
+        }
+
+        // Community leaderboard privacy is opt-in and can be changed at any time.
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Appear on community leaderboards",
+                        color = DeepTeal,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        "When enabled, your display name, city, avatar and EcoPoints can be seen by other signed-in E50 citizens. Your email is never shown.",
+                        color = DeepTeal.copy(alpha = 0.72f),
+                        fontSize = 11.sp
+                    )
+                }
+                Switch(
+                    checked = leaderboardVisible,
+                    onCheckedChange = onUpdateLeaderboardVisibility,
+                    modifier = Modifier.testTag("leaderboard_visibility_switch")
+                )
             }
         }
 
