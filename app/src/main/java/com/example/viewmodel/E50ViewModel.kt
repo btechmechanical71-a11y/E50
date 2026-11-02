@@ -14,6 +14,8 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 data class AuthUiState(
@@ -76,7 +78,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                             val user = status.session.user
                             val email = user?.email.orEmpty()
                             val name = user?.userMetadata?.get("display_name")
-                                ?.toString()?.removeSurrounding("\\\"")
+                                ?.jsonPrimitive?.contentOrNull
                                 ?.takeIf { it.isNotBlank() }
                                 ?: email.substringBefore("@").ifBlank { "Eco Citizen" }
                             val city = user?.userMetadata?.get("city")
