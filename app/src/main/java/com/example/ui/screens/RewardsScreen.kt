@@ -38,7 +38,7 @@ fun RewardsScreen(
     val scope = rememberCoroutineScope()
 
     val shopAvatars = listOf(
-        Triple("🌱 Eco Pioneer", 0, "Earned on onboarding"),
+        Triple("🌱 Eco Pioneer", 0, "Default avatar"),
         Triple("⚡ Energy Sleuth", 0, "Default detective title"),
         Triple("🍃 Green Champion", 0, "Unlocked explorer title"),
         Triple("🌳 Solar Guardian", 100, "Unlocks with 100 EcoCredits"),
