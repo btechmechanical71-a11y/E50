@@ -14,11 +14,11 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.e50.ecoact.cloud"
+    applicationId = "com.aistudio.e50.ecoact.rewards"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
-    versionName = "2.1-rewards"
+    versionCode = 1
+    versionName = "3.0-rewards"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
