@@ -29,6 +29,7 @@ import java.util.Locale
 fun ProfileScreen(
     userProfile: UserProfile,
     householdDna: HouseholdDna,
+    dataSyncStatus: String,
     onBack: () -> Unit,
     onUpdateProfile: (name: String, city: String) -> Unit,
     onResetData: () -> Unit,
@@ -124,6 +125,34 @@ fun ProfileScreen(
                     Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Edit Display Name & City", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+        }
+
+        // Cloud persistence status for the signed-in account.
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(14.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = if (dataSyncStatus.contains("failed", ignoreCase = true) ||
+                        dataSyncStatus.contains("could not", ignoreCase = true)
+                    ) Icons.Default.CloudOff else Icons.Default.CloudDone,
+                    contentDescription = null,
+                    tint = if (dataSyncStatus.contains("failed", ignoreCase = true) ||
+                        dataSyncStatus.contains("could not", ignoreCase = true)
+                    ) AlertCoral else FreshGreen
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Cloud sync", fontWeight = FontWeight.Bold, color = DeepTeal, fontSize = 13.sp)
+                    Text(dataSyncStatus, color = DeepTeal.copy(alpha = 0.75f), fontSize = 12.sp)
                 }
             }
         }
