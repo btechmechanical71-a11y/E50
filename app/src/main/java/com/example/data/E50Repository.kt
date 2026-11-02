@@ -251,6 +251,11 @@ class E50Repository(context: Context) {
         saveToStorage()
     }
 
+    fun skipOnboarding() {
+        _userProfile.value = _userProfile.value.copy(onboardingCompleted = true)
+        saveToStorage()
+    }
+
     fun updateHouseholdDna(dna: HouseholdDna) {
         _householdDna.value = dna
         saveToStorage()
