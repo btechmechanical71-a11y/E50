@@ -28,5 +28,12 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
+      - name: Write private Supabase configuration
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          printf 'SUPABASE_URL=%s\\nSUPABASE_PUBLISHABLE_KEY=%s\\n' "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" > .env
+
       - name: Compile debug Kotlin
         run: gradle :app:compileDebugKotlin
