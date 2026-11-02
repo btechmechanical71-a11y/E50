@@ -11,7 +11,8 @@ data class UserProfile(
     val ecoPoints: Int = 120,
     val ecoCredits: Int = 350,
     val selectedAvatar: String = "🌱 Eco Pioneer",
-    val unlockedAvatars: List<String> = listOf("🌱 Eco Pioneer", "⚡ Energy Sleuth", "🍃 Green Champion")
+    val unlockedAvatars: List<String> = listOf("🌱 Eco Pioneer", "⚡ Energy Sleuth", "🍃 Green Champion"),
+    val leaderboardVisible: Boolean = false
 )
 
 data class HouseholdDna(
