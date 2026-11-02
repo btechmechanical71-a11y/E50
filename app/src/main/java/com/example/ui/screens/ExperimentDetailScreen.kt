@@ -98,7 +98,7 @@ fun ExperimentDetailScreen(
                     }
 
                     Text(
-                        text = "+${experiment.ecoPointsReward} EcoPoints Reward",
+                        text = "+${experiment.ecoPointsReward} EcoPoints after 7 distinct server-verified days",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = DeepTeal
@@ -280,7 +280,7 @@ fun ExperimentDetailScreen(
             onDismiss = { checkDialogDay = null },
             onConfirm = { kwhVal, notesVal ->
                 val awarded = onLogDailyCheck(dayNum, kwhVal, notesVal)
-                snackbarMessage = if (awarded) "Logged Day $dayNum! Earned +10 EcoPoints 🌱" else "Updated Day $dayNum log"
+                snackbarMessage = if (awarded) "Day $dayNum submitted. Cloud checks the daily reward limit." else "Updated Day $dayNum log"
                 checkDialogDay = null
             }
         )
@@ -334,7 +334,7 @@ private fun DailyHabitCheckDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = FreshGreen)
             ) {
-                Text("Confirm & Earn EcoPoints", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Submit Daily Check", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
