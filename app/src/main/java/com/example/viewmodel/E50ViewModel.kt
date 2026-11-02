@@ -126,6 +126,10 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                             userId = authenticatedUserId,
                                             email = email
                                         )
+                                        // Ignore a late response if the user switched accounts while it loaded.
+                                        if (repository.userProfile.value.id != authenticatedUserId) {
+                                            return@launch
+                                        }
                                         val mergedExperiments = repository.experiments.value.map { local ->
                                             val remote = snapshot.experiments.firstOrNull { it.id == local.id }
                                             if (remote == null) {
@@ -366,12 +370,17 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
     private fun launchCloudSync(label: String, operation: suspend (String) -> Unit) {
         val userId = cloudReadyUserId ?: return
         viewModelScope.launch {
+            if (cloudReadyUserId != userId) return@launch
             try {
                 operation(userId)
-                _dataSyncStatus.value = "Saved $label to cloud"
+                if (cloudReadyUserId == userId) {
+                    _dataSyncStatus.value = "Saved $label to cloud"
+                }
             } catch (error: Exception) {
-                _dataSyncStatus.value =
-                    "Could not sync $label: ${error.message ?: "unknown error"}"
+                if (cloudReadyUserId == userId) {
+                    _dataSyncStatus.value =
+                        "Could not sync $label: ${error.message ?: "unknown error"}"
+                }
             }
         }
     }
