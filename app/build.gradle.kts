@@ -89,6 +89,7 @@ dependencies {
   implementation(platform(libs.firebase.bom))
   implementation(platform(libs.supabase.bom))
   implementation(libs.supabase.auth)
+  implementation(libs.supabase.postgrest)
   implementation(libs.ktor.client.android)
   coreLibraryDesugaring(libs.desugar.jdk.libs)
   // implementation(libs.accompanist.permissions)
