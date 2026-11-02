@@ -41,6 +41,7 @@ create policy "reward_ledger_select_own"
 
 -- Remove the Phase 2 client ability to modify avatar ownership/equipment.
 -- Profile text and onboarding fields remain client-editable.
+revoke insert on table public.profiles from authenticated;
 revoke update (selected_avatar, unlocked_avatars, eco_points, eco_credits)
     on table public.profiles from authenticated;
 revoke update (selected_avatar, unlocked_avatars, eco_points, eco_credits)
@@ -258,9 +259,9 @@ declare
     v_bonus_points integer;
     v_utc_day text := (timezone('UTC', now())::date)::text;
 begin
-    if tg_op = 'INSERT' then
-        v_just_completed := new.completed is true;
-    else
+    -- A completed row inserted during account migration is historical data,
+    -- not a newly earned reward. Only a user action changing false -> true qualifies.
+    if tg_op = 'UPDATE' then
         v_just_completed := old.completed is false and new.completed is true;
     end if;
 
