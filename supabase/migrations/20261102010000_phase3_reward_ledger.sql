@@ -53,6 +53,7 @@ create table if not exists private.experiment_reward_catalog (
 );
 
 revoke all on table private.experiment_reward_catalog from public, anon, authenticated;
+alter table private.experiment_reward_catalog enable row level security;
 
 insert into private.experiment_reward_catalog (experiment_id, bonus_points)
 values
@@ -73,6 +74,7 @@ create table if not exists private.avatar_catalog (
 );
 
 revoke all on table private.avatar_catalog from public, anon, authenticated;
+alter table private.avatar_catalog enable row level security;
 
 insert into private.avatar_catalog (avatar_name, cost_credits, active)
 values
