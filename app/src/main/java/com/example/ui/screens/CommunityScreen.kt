@@ -167,8 +167,19 @@ fun CommunityScreen(
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
-                    items(cityLeaderboard) { city ->
-                        CityRankRow(city = city)
+                    if (cityLeaderboard.isEmpty()) {
+                        item {
+                            Text(
+                                "No citizens have opted into city rankings yet. You can enable visibility in Profile Settings.",
+                                fontSize = 12.sp,
+                                color = DeepTeal.copy(alpha = 0.75f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp)
+                            )
+                        }
+                    } else {
+                        items(cityLeaderboard) { city ->
+                            CityRankRow(city = city)
+                        }
                     }
                 }
             }
