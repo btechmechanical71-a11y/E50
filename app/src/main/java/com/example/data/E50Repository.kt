@@ -244,7 +244,7 @@ class E50Repository(context: Context) {
             city = city,
             onboardingCompleted = true,
             isSignedIn = true,
-            ecoPoints = current.ecoPoints + 50 // Onboarding bonus
+            ecoPoints = current.ecoPoints
         )
         _userProfile.value = updated
         checkAchievements()
@@ -273,8 +273,7 @@ class E50Repository(context: Context) {
         }
         _footprintEntries.value = current
 
-        // Award points for tracking
-        awardEcoPoints(15, "Logged monthly electricity reading: ${entry.monthName} ${entry.year}")
+        // Reward points are issued by the Supabase footprint-insert trigger.
         checkAchievements()
         saveToStorage()
     }
@@ -342,10 +341,7 @@ class E50Repository(context: Context) {
 
                 if (!alreadyCompleted) {
                     pointsAwarded = true
-                    awardEcoPoints(10, "Day $dayNumber of ${exp.title}")
-                    if (isFirstTimeCompleted) {
-                        awardEcoPoints(exp.ecoPointsReward, "Completed 7-Day Experiment: ${exp.title}")
-                    }
+                    // Supabase awards this completion and the experiment bonus transactionally.
                 }
 
                 exp.copy(
@@ -371,11 +367,7 @@ class E50Repository(context: Context) {
         list.add(0, result)
         _gameScores.value = list
 
-        // Mini-games award EcoCredits ONLY (virtual game tokens separate from real-world EcoPoints)
-        val current = _userProfile.value
-        _userProfile.value = current.copy(
-            ecoCredits = current.ecoCredits + result.ecoCreditsEarned
-        )
+        // Supabase awards a fixed daily game reward; client-reported credits are never trusted.
         checkAchievements()
         saveToStorage()
     }
@@ -392,7 +384,7 @@ class E50Repository(context: Context) {
             } else b
         }
         _communityBattles.value = list
-        awardEcoPoints(20, "Enrolled in Community Climate Battle")
+        // Community battle rewards are disabled until Phase 4 persists verified contributions.
         checkAchievements()
         saveToStorage()
     }
@@ -407,8 +399,7 @@ class E50Repository(context: Context) {
             } else b
         }
         _communityBattles.value = list
-        val pts = (amount * 5).toInt().coerceIn(5, 50)
-        awardEcoPoints(pts, "Contributed to Community Climate Battle")
+        // Do not issue client-side points for self-reported community contributions.
         checkAchievements()
         saveToStorage()
     }
@@ -420,38 +411,21 @@ class E50Repository(context: Context) {
         current.add(0, impact)
         _impactLogs.value = current
 
-        awardEcoPoints(25, "Logged verified impact action: ${impact.title}")
+        // Supabase applies a capped daily impact-submission reward.
         checkAchievements()
         saveToStorage()
     }
 
     // --- Rewards & Avatars ---
-    fun unlockAvatar(avatarName: String, costEcoCredits: Int): Boolean {
-        val current = _userProfile.value
-        if (current.ecoCredits >= costEcoCredits && !current.unlockedAvatars.contains(avatarName)) {
-            val updated = current.copy(
-                ecoCredits = current.ecoCredits - costEcoCredits,
-                unlockedAvatars = current.unlockedAvatars + avatarName,
-                selectedAvatar = avatarName
-            )
-            _userProfile.value = updated
-            saveToStorage()
-            return true
-        }
-        return false
-    }
-
-    fun selectAvatar(avatarName: String) {
-        val current = _userProfile.value
-        if (current.unlockedAvatars.contains(avatarName)) {
-            _userProfile.value = current.copy(selectedAvatar = avatarName)
-            saveToStorage()
-        }
-    }
-
-    private fun awardEcoPoints(points: Int, reason: String) {
-        val current = _userProfile.value
-        _userProfile.value = current.copy(ecoPoints = current.ecoPoints + points)
+    fun applyServerRewardProfile(profile: UserProfile) {
+        _userProfile.value = _userProfile.value.copy(
+            ecoPoints = profile.ecoPoints,
+            ecoCredits = profile.ecoCredits,
+            selectedAvatar = profile.selectedAvatar,
+            unlockedAvatars = profile.unlockedAvatars
+        )
+        checkAchievements()
+        saveToStorage()
     }
 
     // --- Achievements Computation ---
