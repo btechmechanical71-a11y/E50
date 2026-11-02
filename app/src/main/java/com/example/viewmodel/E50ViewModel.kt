@@ -235,6 +235,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
 
                                         migrateRecord("profile") {
                                             cloudRepository.saveProfile(mergedProfile)
+                                            refreshRewardProfile(authenticatedUserId)
                                         }
                                         if (mergedDna != null) {
                                             migrateRecord("household profile") {
@@ -532,8 +533,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun refreshRewardProfile(userId: String) {
         val activeProfile = repository.userProfile.value
         val latest = cloudRepository.loadRewardProfile(userId, activeProfile.email)
-        if (cloudReadyUserId == userId &&
-            repository.userProfile.value.isSignedIn &&
+        if (repository.userProfile.value.isSignedIn &&
             repository.userProfile.value.id == userId
         ) {
             repository.applyServerRewardProfile(latest)
