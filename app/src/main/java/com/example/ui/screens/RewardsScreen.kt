@@ -23,16 +23,19 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.AchievementItem
 import com.example.data.model.UserProfile
 import com.example.ui.theme.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun RewardsScreen(
     userProfile: UserProfile,
     achievements: List<AchievementItem>,
     onBack: () -> Unit,
-    onUnlockAvatar: (avatar: String, cost: Int) -> Boolean,
-    onSelectAvatar: (String) -> Unit
+    onUnlockAvatar: suspend (avatar: String, cost: Int) -> Boolean,
+    onSelectAvatar: suspend (String) -> Boolean
 ) {
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    var isRewardActionInProgress by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val shopAvatars = listOf(
         Triple("🌱 Eco Pioneer", 0, "Earned on onboarding"),
@@ -179,8 +182,16 @@ fun RewardsScreen(
                                     }
                                 } else if (isUnlocked) {
                                     OutlinedButton(
-                                        onClick = { onSelectAvatar(avatar) },
+                                        onClick = {
+                                            scope.launch {
+                                                isRewardActionInProgress = true
+                                                val ok = onSelectAvatar(avatar)
+                                                snackbarMessage = if (ok) "Avatar equipped!" else "Could not equip avatar. Check cloud sync."
+                                                isRewardActionInProgress = false
+                                            }
+                                        },
                                         shape = RoundedCornerShape(8.dp),
+                                        enabled = !isRewardActionInProgress,
                                         modifier = Modifier.testTag("equip_${avatar.take(5)}")
                                     ) {
                                         Text("Equip", fontSize = 11.sp, color = DeepTeal, fontWeight = FontWeight.Bold)
@@ -188,12 +199,20 @@ fun RewardsScreen(
                                 } else {
                                     Button(
                                         onClick = {
-                                            val ok = onUnlockAvatar(avatar, cost)
-                                            snackbarMessage = if (ok) "Unlocked $avatar! 🎉" else "Need $cost EcoCredits to unlock!"
+                                            scope.launch {
+                                                isRewardActionInProgress = true
+                                                val ok = onUnlockAvatar(avatar, cost)
+                                                snackbarMessage = if (ok) {
+                                                    "Unlocked $avatar! 🎉"
+                                                } else {
+                                                    "Purchase failed. Check your EcoCredits and cloud sync."
+                                                }
+                                                isRewardActionInProgress = false
+                                            }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = SunGold),
                                         shape = RoundedCornerShape(8.dp),
-                                        enabled = userProfile.ecoCredits >= cost,
+                                        enabled = userProfile.ecoCredits >= cost && !isRewardActionInProgress,
                                         modifier = Modifier.testTag("unlock_${avatar.take(5)}")
                                     ) {
                                         Text("⚡ $cost", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
