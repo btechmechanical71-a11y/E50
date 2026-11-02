@@ -164,33 +164,9 @@ revoke all on function private.apply_reward_event(
     uuid, text, text, integer, integer, text, jsonb
 ) from public, anon, authenticated;
 
--- Onboarding earns 50 EcoPoints exactly once, on the false -> true transition.
-create or replace function private.reward_onboarding_completion()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-    if old.onboarding_completed is false and new.onboarding_completed is true then
-        perform private.apply_reward_event(
-            new.id,
-            'onboarding:completed',
-            'ONBOARDING',
-            50,
-            0,
-            'Completed E50 onboarding',
-            jsonb_build_object('source', 'profiles.onboarding_completed')
-        );
-    end if;
-    return new;
-end;
-$$;
-
-drop trigger if exists trg_reward_onboarding_completion on public.profiles;
-create trigger trg_reward_onboarding_completion
-    after update of onboarding_completed on public.profiles
-    for each row execute function private.reward_onboarding_completion();
+-- Onboarding completion does not award points in Phase 3 because the client can
+-- mark onboarding as skipped. This avoids rewarding a client-controlled skip.
+-- Activity rewards below are issued only by server-side event triggers.
 
 -- A newly inserted monthly electricity record earns 15 points once.
 -- Updating an existing month cannot mint another reward.
