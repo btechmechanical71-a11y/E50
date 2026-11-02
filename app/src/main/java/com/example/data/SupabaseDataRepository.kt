@@ -227,15 +227,18 @@ data class RemoteExperimentState(
 private fun ProfileDbRow.toModel(email: String) = UserProfile(
     id = id,
     email = email,
-    displayName = displayName,
-    city = city,
+    // Older profile rows may contain NULL values from the original schema.
+    // Normalize them before constructing the non-null Android model.
+    displayName = displayName?.takeIf { it.isNotBlank() }
+        ?: email.substringBefore("@").ifBlank { "Eco Citizen" },
+    city = city?.takeIf { it.isNotBlank() } ?: "Ahmedabad",
     isGuest = false,
     isSignedIn = true,
     onboardingCompleted = onboardingCompleted,
     ecoPoints = ecoPoints,
     ecoCredits = ecoCredits,
-    selectedAvatar = selectedAvatar,
-    unlockedAvatars = unlockedAvatars.ifEmpty { listOf("🌱 Eco Pioneer") }
+    selectedAvatar = selectedAvatar?.takeIf { it.isNotBlank() } ?: "🌱 Eco Pioneer",
+    unlockedAvatars = unlockedAvatars.orEmpty().ifEmpty { listOf("🌱 Eco Pioneer") }
 )
 
 private fun HouseholdDnaDbRow.toModel() = HouseholdDna(
@@ -303,11 +306,11 @@ private fun ImpactLogDbRow.toModel() = ProofOfImpact(
 @Serializable
 private data class ProfileDbRow(
     val id: String,
-    @SerialName("display_name") val displayName: String,
-    val city: String,
+    @SerialName("display_name") val displayName: String? = null,
+    val city: String? = null,
     @SerialName("onboarding_completed") val onboardingCompleted: Boolean = false,
-    @SerialName("selected_avatar") val selectedAvatar: String = "🌱 Eco Pioneer",
-    @SerialName("unlocked_avatars") val unlockedAvatars: List<String> = listOf("🌱 Eco Pioneer"),
+    @SerialName("selected_avatar") val selectedAvatar: String? = null,
+    @SerialName("unlocked_avatars") val unlockedAvatars: List<String>? = null,
     @SerialName("eco_points") val ecoPoints: Int = 0,
     @SerialName("eco_credits") val ecoCredits: Int = 0
 )
