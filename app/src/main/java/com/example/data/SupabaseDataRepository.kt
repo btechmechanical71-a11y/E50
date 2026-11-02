@@ -2,8 +2,6 @@ package com.example.data
 
 import com.example.data.model.*
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.result.decodeList
-import io.github.jan.supabase.postgrest.result.decodeSingle
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
