@@ -164,13 +164,18 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                         cloudReadyUserId = authenticatedUserId
                                         _dataSyncStatus.value = "Cloud data synced"
                                     } catch (error: Exception) {
-                                        _dataSyncStatus.value =
-                                            "Cloud load failed: ${error.message ?: "unknown error"}"
+                                        if (repository.userProfile.value.id == authenticatedUserId) {
+                                            _dataSyncStatus.value =
+                                                "Cloud load failed: ${error.message ?: "unknown error"}"
+                                        }
                                     } finally {
                                         if (cloudLoadingUserId == authenticatedUserId) {
                                             cloudLoadingUserId = null
                                         }
-                                        if (!_authUiState.value.isPasswordRecovery) {
+                                        if (
+                                            repository.userProfile.value.id == authenticatedUserId &&
+                                            !_authUiState.value.isPasswordRecovery
+                                        ) {
                                             navigateAfterCloudLoad()
                                         }
                                     }
