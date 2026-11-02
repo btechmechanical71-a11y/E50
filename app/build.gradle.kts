@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.e50.ecoact.cloud"
     minSdk = 24
     targetSdk = 36
-    versionCode = 2
-    versionName = "2.0-cloud"
+    versionCode = 3
+    versionName = "2.1-rewards"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
