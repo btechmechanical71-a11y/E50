@@ -203,7 +203,7 @@ as $$
 begin
     perform private.apply_reward_event(
         new.user_id,
-        'footprint:' || new.id,
+        'footprint:' || new.year::text || ':' || lower(trim(new.month_name)),
         'FOOTPRINT_ENTRY',
         15,
         0,
