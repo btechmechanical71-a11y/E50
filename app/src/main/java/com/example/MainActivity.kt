@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
 fun E50App(viewModel: E50ViewModel = viewModel()) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val authUiState by viewModel.authUiState.collectAsStateWithLifecycle()
+    val dataSyncStatus by viewModel.dataSyncStatus.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
     val householdDna by viewModel.householdDna.collectAsStateWithLifecycle()
     val footprintEntries by viewModel.footprintEntries.collectAsStateWithLifecycle()
@@ -178,7 +179,7 @@ fun E50App(viewModel: E50ViewModel = viewModel()) {
                         onComplete = { dna, name, city ->
                             viewModel.completeOnboarding(dna, name, city)
                         },
-                        onSkip = { viewModel.navigateTo(AppScreen.Dashboard) }
+                        onSkip = { viewModel.skipOnboarding() }
                     )
                 }
 
@@ -316,9 +317,10 @@ fun E50App(viewModel: E50ViewModel = viewModel()) {
                     ProfileScreen(
                         userProfile = userProfile,
                         householdDna = householdDna,
+                        dataSyncStatus = dataSyncStatus,
                         onBack = { viewModel.navigateBack() },
                         onUpdateProfile = { name, city ->
-                            viewModel.signIn(userProfile.email, name, city, userProfile.isGuest)
+                            viewModel.updateProfile(name, city)
                         },
                         onResetData = { viewModel.resetData() },
                         onSignOut = { viewModel.signOut() }
