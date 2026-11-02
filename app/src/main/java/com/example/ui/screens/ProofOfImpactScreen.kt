@@ -366,13 +366,13 @@ private fun LogProofDialog(
                             estimatedKwhSaved = kwh,
                             estimatedKgCo2Avoided = avoided,
                             photoNote = proofNote.trim(),
-                            status = "Verified & Persisted"
+                            status = "Self-reported"
                         )
                     )
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = FreshGreen)
             ) {
-                Text("Confirm & Earn 25 EcoPoints", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Submit impact (up to 25 daily EcoPoints)", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
