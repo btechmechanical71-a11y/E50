@@ -75,9 +75,10 @@ class SupabaseDataRepository {
                 onboardingCompleted = profile.onboardingCompleted,
                 selectedAvatar = profile.selectedAvatar,
                 unlockedAvatars = profile.unlockedAvatars
-            ),
+            )
+        ) {
             onConflict = "id"
-        )
+        }
     }
 
     suspend fun saveHouseholdDna(userId: String, dna: HouseholdDna) {
@@ -95,9 +96,10 @@ class SupabaseDataRepository {
                 hasRooftopAccess = dna.hasRooftopAccess,
                 hasSolarInstalled = dna.hasSolarInstalled,
                 sustainabilityInterests = dna.sustainabilityInterests
-            ),
+            )
+        ) {
             onConflict = "user_id"
-        )
+        }
     }
 
     suspend fun saveFootprint(userId: String, entry: FootprintEntry) {
@@ -111,9 +113,10 @@ class SupabaseDataRepository {
                 billAmount = entry.billAmount,
                 notes = entry.notes,
                 timestampMs = entry.timestamp
-            ),
+            )
+        ) {
             onConflict = "user_id,month_name,year"
-        )
+        }
     }
 
     suspend fun deleteFootprint(userId: String, entryId: String) {
@@ -133,9 +136,10 @@ class SupabaseDataRepository {
                 status = experiment.status.name,
                 startedTimestampMs = experiment.startedTimestamp,
                 completedDays = experiment.completedDays
-            ),
+            )
+        ) {
             onConflict = "user_id,experiment_id"
-        )
+        }
 
         val checks = experiment.dailyChecks.map { check ->
             DailyCheckDbRow(
@@ -151,8 +155,9 @@ class SupabaseDataRepository {
         if (checks.isNotEmpty()) {
             client.from("daily_checks").upsert(
                 checks,
+            ) {
                 onConflict = "user_id,experiment_id,day_number"
-            )
+            }
         }
     }
 
@@ -168,10 +173,11 @@ class SupabaseDataRepository {
                 reportedEcoCredits = result.ecoCreditsEarned,
                 summary = result.summary,
                 timestampMs = result.timestamp
-            ),
-            onConflict = "user_id,id",
+            )
+        ) {
+            onConflict = "user_id,id"
             ignoreDuplicates = true
-        )
+        }
     }
 
     suspend fun saveImpactLog(userId: String, impact: ProofOfImpact) {
