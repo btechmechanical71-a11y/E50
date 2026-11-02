@@ -41,9 +41,9 @@ create policy "reward_ledger_select_own"
 
 -- Remove the Phase 2 client ability to modify avatar ownership/equipment.
 -- Profile text and onboarding fields remain client-editable.
-revoke update (selected_avatar, unlocked_avatars)
+revoke update (selected_avatar, unlocked_avatars, eco_points, eco_credits)
     on table public.profiles from authenticated;
-revoke update (selected_avatar, unlocked_avatars)
+revoke update (selected_avatar, unlocked_avatars, eco_points, eco_credits)
     on table public.profiles from anon;
 
 -- Private, server-owned reward values for the six seven-day experiments.
