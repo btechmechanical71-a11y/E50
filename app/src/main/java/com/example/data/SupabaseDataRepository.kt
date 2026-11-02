@@ -307,7 +307,8 @@ private fun ProfileDbRow.toModel(email: String) = UserProfile(
     ecoPoints = ecoPoints,
     ecoCredits = ecoCredits,
     selectedAvatar = selectedAvatar?.takeIf { it.isNotBlank() } ?: "🌱 Eco Pioneer",
-    unlockedAvatars = unlockedAvatars.orEmpty().ifEmpty { listOf("🌱 Eco Pioneer") }
+    unlockedAvatars = unlockedAvatars.orEmpty().ifEmpty { listOf("🌱 Eco Pioneer") },
+    leaderboardVisible = leaderboardVisible
 )
 
 private fun HouseholdDnaDbRow.toModel() = HouseholdDna(
