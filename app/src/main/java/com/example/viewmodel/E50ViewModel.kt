@@ -293,18 +293,30 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                         ) {
                                             _dataSyncStatus.value =
                                                 "Cloud load failed: ${error.message ?: "unknown error"}"
+                                            _authUiState.value = AuthUiState(
+                                                error = "You are signed in, but E50 could not connect to your cloud data. " +
+                                                    "Check your internet connection and try signing in again. " +
+                                                    "Details: ${error.message ?: "unknown error"}"
+                                            )
                                         }
                                     } finally {
                                         if (cloudLoadingUserId == authenticatedUserId) {
                                             cloudLoadingUserId = null
                                         }
+                                        val activeProfile = repository.userProfile.value
                                         if (
-                                            repository.userProfile.value.isSignedIn &&
-                                            !repository.userProfile.value.isGuest &&
-                                            repository.userProfile.value.id == authenticatedUserId &&
+                                            activeProfile.isSignedIn &&
+                                            !activeProfile.isGuest &&
+                                            activeProfile.id == authenticatedUserId &&
                                             !_authUiState.value.isPasswordRecovery
                                         ) {
-                                            navigateAfterCloudLoad()
+                                            if (cloudReadyUserId == authenticatedUserId) {
+                                                navigateAfterCloudLoad()
+                                            } else {
+                                                navigationBackStack.clear()
+                                                navigationBackStack.add(AppScreen.Auth)
+                                                _currentScreen.value = AppScreen.Auth
+                                            }
                                         }
                                     }
                                 }
