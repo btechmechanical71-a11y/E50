@@ -169,14 +169,41 @@ class E50Repository(context: Context) {
         saveToStorage()
     }
 
-    fun loginUser(email: String, name: String, city: String, isGuest: Boolean) {
-        val updated = _userProfile.value.copy(
-            email = if (email.isNotBlank()) email else _userProfile.value.email,
-            displayName = if (name.isNotBlank()) name else _userProfile.value.displayName,
-            city = if (city.isNotBlank()) city else _userProfile.value.city,
+    fun loginUser(
+        email: String,
+        name: String,
+        city: String,
+        isGuest: Boolean,
+        userId: String? = null
+    ) {
+        val current = _userProfile.value
+        val isDifferentAccount = userId != null && userId != current.id
+
+        val updated = current.copy(
+            id = userId ?: current.id,
+            email = if (email.isNotBlank()) email else current.email,
+            displayName = if (name.isNotBlank()) name else current.displayName,
+            city = if (city.isNotBlank()) city else current.city,
             isGuest = isGuest,
-            isSignedIn = true
+            isSignedIn = true,
+            onboardingCompleted = if (isDifferentAccount) false else current.onboardingCompleted,
+            ecoPoints = if (isDifferentAccount) 0 else current.ecoPoints,
+            ecoCredits = if (isDifferentAccount) 0 else current.ecoCredits,
+            selectedAvatar = if (isDifferentAccount) "🌱 Eco Pioneer" else current.selectedAvatar,
+            unlockedAvatars = if (isDifferentAccount) listOf("🌱 Eco Pioneer") else current.unlockedAvatars
         )
+
+        if (isDifferentAccount) {
+            // These values are device-local until Phase 2. Never carry one account's
+            // personal records over to another authenticated account.
+            _householdDna.value = HouseholdDna()
+            _footprintEntries.value = emptyList()
+            _experiments.value = getDefaultExperiments()
+            _communityBattles.value = getDefaultCommunityBattles()
+            _impactLogs.value = emptyList()
+            _gameScores.value = emptyList()
+        }
+
         _userProfile.value = updated
         saveToStorage()
     }
