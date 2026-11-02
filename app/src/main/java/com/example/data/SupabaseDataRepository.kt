@@ -205,7 +205,12 @@ data class SupabaseUserSnapshot(
     val impactLogs: List<ProofOfImpact>
 )
 
-data class RemoteDailyCheck(\n    val experimentId: String,\n    val check: DailyCheck\n)\n\ndata class RemoteExperimentState(
+data class RemoteDailyCheck(
+    val experimentId: String,
+    val check: DailyCheck
+)
+
+data class RemoteExperimentState(
     val id: String,
     val status: ExperimentStatus,
     val startedTimestamp: Long?,
@@ -214,6 +219,7 @@ data class RemoteDailyCheck(\n    val experimentId: String,\n    val check: Dail
 
 private fun ProfileDbRow.toModel(email: String) = UserProfile(
     id = id,
+    email = email,
     displayName = displayName,
     city = city,
     isGuest = false,
