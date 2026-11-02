@@ -214,6 +214,28 @@ class E50Repository(context: Context) {
         saveToStorage()
     }
 
+    /**
+     * Replace the active account's cached data with its Supabase snapshot.
+     * This method intentionally performs no reward calculations.
+     */
+    fun restoreCloudData(
+        profile: UserProfile,
+        dna: HouseholdDna?,
+        footprints: List<FootprintEntry>,
+        experiments: List<EnergyExperiment>,
+        gameScores: List<MiniGameResult>,
+        impactLogs: List<ProofOfImpact>
+    ) {
+        _userProfile.value = profile.copy(isGuest = false, isSignedIn = true)
+        _householdDna.value = dna ?: HouseholdDna()
+        _footprintEntries.value = footprints
+        _experiments.value = experiments
+        _gameScores.value = gameScores
+        _impactLogs.value = impactLogs
+        checkAchievements()
+        saveToStorage()
+    }
+
     fun completeOnboarding(dna: HouseholdDna, name: String, city: String) {
         _householdDna.value = dna
         val current = _userProfile.value
