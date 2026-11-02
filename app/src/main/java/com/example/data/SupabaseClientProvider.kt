@@ -3,6 +3,7 @@ package com.example.data
 import com.example.BuildConfig
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.FlowType
+import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.createSupabaseClient
 
 /**
@@ -35,6 +36,7 @@ object SupabaseClientProvider {
             supabaseUrl = projectUrl,
             supabaseKey = publishableKey
         ) {
+            install(Postgrest)
             install(Auth) {
                 flowType = FlowType.PKCE
                 scheme = "com.aistudio.e50.ecoact"
