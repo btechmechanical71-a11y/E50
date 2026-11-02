@@ -18,7 +18,7 @@ class SupabaseDataRepository {
     private val client
         get() = SupabaseClientProvider.client
 
-    suspend fun loadUserSnapshot(userId: String): SupabaseUserSnapshot {
+    suspend fun loadUserSnapshot(userId: String, email: String): SupabaseUserSnapshot {
         val profile = client.from("profiles")
             .select { filter { eq("id", userId) } }
             .decodeSingle<ProfileDbRow>()
@@ -56,11 +56,11 @@ class SupabaseDataRepository {
             .sortedByDescending { it.timestamp }
 
         return SupabaseUserSnapshot(
-            profile = profile.toModel(),
+            profile = profile.toModel(email),
             householdDna = household,
             footprints = footprints,
             experiments = experiments.map { it.toModel() },
-            dailyChecks = dailyChecks.map { it.toModel() },
+            dailyChecks = dailyChecks.map { RemoteDailyCheck(it.experimentId, it.toModel()) },
             gameScores = games,
             impactLogs = impacts
         )
@@ -200,19 +200,19 @@ data class SupabaseUserSnapshot(
     val householdDna: HouseholdDna?,
     val footprints: List<FootprintEntry>,
     val experiments: List<RemoteExperimentState>,
-    val dailyChecks: List<DailyCheck>,
+    val dailyChecks: List<RemoteDailyCheck>,
     val gameScores: List<MiniGameResult>,
     val impactLogs: List<ProofOfImpact>
 )
 
-data class RemoteExperimentState(
+data class RemoteDailyCheck(\n    val experimentId: String,\n    val check: DailyCheck\n)\n\ndata class RemoteExperimentState(
     val id: String,
     val status: ExperimentStatus,
     val startedTimestamp: Long?,
     val completedDays: List<Int>
 )
 
-private fun ProfileDbRow.toModel() = UserProfile(
+private fun ProfileDbRow.toModel(email: String) = UserProfile(
     id = id,
     displayName = displayName,
     city = city,
