@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.E50Repository
 import com.example.data.SupabaseClientProvider
+import com.example.data.SupabaseDataRepository
 import com.example.data.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,12 @@ sealed class AppScreen {
 class E50ViewModel(application: Application) : AndroidViewModel(application) {
 
     val repository = E50Repository(application.applicationContext)
+    private val cloudRepository = SupabaseDataRepository()
+    private var cloudLoadingUserId: String? = null
+    private var cloudReadyUserId: String? = null
+
+    private val _dataSyncStatus = MutableStateFlow("Not connected")
+    val dataSyncStatus: StateFlow<String> = _dataSyncStatus.asStateFlow()
 
     // Always begin at Landing until Supabase confirms that a saved session is valid.
     private val _currentScreen = MutableStateFlow<AppScreen>(AppScreen.Landing)
@@ -94,6 +101,64 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                 userId = user?.id
                             )
 
+                            val authenticatedUserId = user?.id
+                            if (
+                                authenticatedUserId != null &&
+                                cloudReadyUserId != authenticatedUserId &&
+                                cloudLoadingUserId != authenticatedUserId
+                            ) {
+                                cloudLoadingUserId = authenticatedUserId
+                                _dataSyncStatus.value = "Loading your cloud data..."
+                                viewModelScope.launch {
+                                    try {
+                                        val snapshot = cloudRepository.loadUserSnapshot(
+                                            userId = authenticatedUserId,
+                                            email = email
+                                        )
+                                        val mergedExperiments = repository.experiments.value.map { local ->
+                                            val remote = snapshot.experiments.firstOrNull { it.id == local.id }
+                                            if (remote == null) {
+                                                local
+                                            } else {
+                                                val remoteChecks = snapshot.dailyChecks
+                                                    .filter { it.experimentId == local.id }
+                                                    .associateBy { it.check.dayNumber }
+                                                local.copy(
+                                                    status = remote.status,
+                                                    startedTimestamp = remote.startedTimestamp,
+                                                    completedDays = remote.completedDays,
+                                                    dailyChecks = local.dailyChecks.map { check ->
+                                                        remoteChecks[check.dayNumber]?.check
+                                                            ?: if (check.dayNumber in remote.completedDays) {
+                                                                check.copy(completed = true)
+                                                            } else {
+                                                                check
+                                                            }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        repository.restoreCloudData(
+                                            profile = snapshot.profile,
+                                            dna = snapshot.householdDna,
+                                            footprints = snapshot.footprints,
+                                            experiments = mergedExperiments,
+                                            gameScores = snapshot.gameScores,
+                                            impactLogs = snapshot.impactLogs
+                                        )
+                                        cloudReadyUserId = authenticatedUserId
+                                        _dataSyncStatus.value = "Cloud data synced"
+                                    } catch (error: Exception) {
+                                        _dataSyncStatus.value =
+                                            "Cloud load failed: ${error.message ?: "unknown error"}"
+                                    } finally {
+                                        if (cloudLoadingUserId == authenticatedUserId) {
+                                            cloudLoadingUserId = null
+                                        }
+                                    }
+                                }
+                            }
+
                             if (_authUiState.value.isPasswordRecovery) {
                                 _authUiState.value = _authUiState.value.copy(
                                     isLoading = false,
@@ -109,6 +174,8 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                         }
 
                         is SessionStatus.NotAuthenticated -> {
+                            cloudReadyUserId = null
+                            cloudLoadingUserId = null
                             if (!repository.userProfile.value.isGuest && !_authUiState.value.isPasswordRecovery) {
                                 repository.signOutUser()
                                 navigationBackStack.clear()
@@ -283,6 +350,38 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
     val impactLogs: StateFlow<List<ProofOfImpact>> = repository.impactLogs
     val gameScores: StateFlow<List<MiniGameResult>> = repository.gameScores
 
+    private fun launchCloudSync(label: String, operation: suspend (String) -> Unit) {
+        val userId = cloudReadyUserId ?: return
+        viewModelScope.launch {
+            try {
+                operation(userId)
+                _dataSyncStatus.value = "Saved $label to cloud"
+            } catch (error: Exception) {
+                _dataSyncStatus.value =
+                    "Could not sync $label: ${error.message ?: "unknown error"}"
+            }
+        }
+    }
+
+    private fun syncProfile() {
+        launchCloudSync("profile") { userId ->
+            cloudRepository.saveProfile(repository.userProfile.value.copy(id = userId))
+        }
+    }
+
+    private fun syncHouseholdDna() {
+        launchCloudSync("household profile") { userId ->
+            cloudRepository.saveHouseholdDna(userId, repository.householdDna.value)
+        }
+    }
+
+    private fun syncExperiment(experimentId: String) {
+        val experiment = repository.experiments.value.firstOrNull { it.id == experimentId } ?: return
+        launchCloudSync("experiment") { userId ->
+            cloudRepository.saveExperiment(userId, experiment)
+        }
+    }
+
     fun navigateTo(screen: AppScreen) {
         if (_currentScreen.value != screen) {
             navigationBackStack.add(screen)
@@ -335,6 +434,8 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun signOut() {
+        cloudReadyUserId = null
+        cloudLoadingUserId = null
         viewModelScope.launch {
             if (SupabaseClientProvider.isConfigured && !repository.userProfile.value.isGuest) {
                 runCatching { SupabaseClientProvider.client.auth.signOut() }
@@ -349,35 +450,58 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun completeOnboarding(dna: HouseholdDna, name: String, city: String) {
         repository.completeOnboarding(dna, name, city)
+        syncProfile()
+        syncHouseholdDna()
         navigateTo(AppScreen.Dashboard)
     }
 
     fun updateHouseholdDna(dna: HouseholdDna) {
         repository.updateHouseholdDna(dna)
+        syncHouseholdDna()
+    }
+
+    fun updateProfile(name: String, city: String) {
+        repository.updateProfile(name, city)
+        syncProfile()
     }
 
     fun addFootprint(entry: FootprintEntry) {
         repository.addFootprintEntry(entry)
+        launchCloudSync("electricity record") { userId ->
+            cloudRepository.saveFootprint(userId, entry)
+        }
     }
 
     fun updateFootprint(entry: FootprintEntry) {
         repository.updateFootprintEntry(entry)
+        launchCloudSync("electricity record") { userId ->
+            cloudRepository.saveFootprint(userId, entry)
+        }
     }
 
     fun deleteFootprint(id: String) {
         repository.deleteFootprintEntry(id)
+        launchCloudSync("electricity record") { userId ->
+            cloudRepository.deleteFootprint(userId, id)
+        }
     }
 
     fun startExperiment(id: String) {
         repository.startExperiment(id)
+        syncExperiment(id)
     }
 
     fun recordDailyCheck(experimentId: String, day: Int, kwh: Double?, notes: String): Boolean {
-        return repository.recordDailyExperimentCheck(experimentId, day, kwh, notes)
+        val awarded = repository.recordDailyExperimentCheck(experimentId, day, kwh, notes)
+        syncExperiment(experimentId)
+        return awarded
     }
 
     fun recordGameScore(result: MiniGameResult) {
         repository.recordGameScore(result)
+        launchCloudSync("game result") { userId ->
+            cloudRepository.saveGameScore(userId, result)
+        }
     }
 
     fun joinBattle(battleId: String) {
@@ -390,14 +514,20 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logProofOfImpact(impact: ProofOfImpact) {
         repository.logProofOfImpact(impact)
+        launchCloudSync("impact log") { userId ->
+            cloudRepository.saveImpactLog(userId, impact)
+        }
     }
 
     fun unlockAvatar(avatar: String, cost: Int): Boolean {
-        return repository.unlockAvatar(avatar, cost)
+        val unlocked = repository.unlockAvatar(avatar, cost)
+        if (unlocked) syncProfile()
+        return unlocked
     }
 
     fun selectAvatar(avatar: String) {
         repository.selectAvatar(avatar)
+        syncProfile()
     }
 
     fun resetData() {
