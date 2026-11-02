@@ -166,7 +166,7 @@ class SupabaseDataRepository {
         }
 
         val checks = experiment.dailyChecks.map { check ->
-            DailyCheckDbRow(
+            DailyCheckUpsertRow(
                 userId = userId,
                 experimentId = experiment.id,
                 dayNumber = check.dayNumber,
@@ -385,6 +385,18 @@ private data class ExperimentDbRow(
 
 @Serializable
 private data class DailyCheckDbRow(
+    @SerialName("user_id") val userId: String,
+    @SerialName("experiment_id") val experimentId: String,
+    @SerialName("day_number") val dayNumber: Int,
+    val completed: Boolean,
+    @SerialName("date_string") val dateString: String,
+    @SerialName("reading_kwh") val readingKwh: Double? = null,
+    val notes: String,
+    @SerialName("completed_at") val completedAt: String? = null
+)
+
+@Serializable
+private data class DailyCheckUpsertRow(
     @SerialName("user_id") val userId: String,
     @SerialName("experiment_id") val experimentId: String,
     @SerialName("day_number") val dayNumber: Int,
