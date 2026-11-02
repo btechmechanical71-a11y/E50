@@ -16,6 +16,16 @@ create table if not exists public.profiles (
     updated_at timestamptz not null default now()
 );
 
+-- The E50 Supabase project may already contain a minimal profiles table.
+-- Add the Phase 2 fields safely without replacing or deleting existing rows.
+alter table public.profiles
+    add column if not exists onboarding_completed boolean not null default false,
+    add column if not exists selected_avatar text not null default '🌱 Eco Pioneer',
+    add column if not exists unlocked_avatars text[] not null default array['🌱 Eco Pioneer']::text[],
+    add column if not exists eco_points integer not null default 0 check (eco_points >= 0),
+    add column if not exists eco_credits integer not null default 0 check (eco_credits >= 0),
+    add column if not exists updated_at timestamptz not null default now();
+
 create table if not exists public.household_dna (
     user_id uuid primary key references auth.users (id) on delete cascade,
     household_size integer not null default 4 check (household_size between 1 and 50),
