@@ -127,7 +127,7 @@ fun CommunityScreen(
             ) {
                 Text("ℹ️", fontSize = 14.sp)
                 Text(
-                    text = "Local Development Mode: Ranks reflect regional benchmarks and your personal local ledger. Real multi-device cloud sync requires backend provisioning.",
+                    text = "Live community data from E50 Cloud. Citizen rankings are opt-in; your own profile is always visible to you.",
                     fontSize = 11.sp,
                     color = DeepTeal.copy(alpha = 0.85f),
                     lineHeight = 15.sp
@@ -160,7 +160,7 @@ fun CommunityScreen(
                 ) {
                     item {
                         Text(
-                            "Gujarat Urban Energy Conservation Tally",
+                            "City rankings • opted-in citizens",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = DeepTeal,
@@ -180,7 +180,7 @@ fun CommunityScreen(
                 ) {
                     item {
                         Text(
-                            "Top Citizen Contributors (Live Rank)",
+                            "Top citizen contributors • opted-in profiles",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = DeepTeal,
@@ -378,7 +378,7 @@ private fun CityRankRow(city: CityLeaderboardEntry) {
                             }
                         }
                     }
-                    Text("${city.activeCitizens} citizens • ${String.format(Locale.US, "%.0f", city.totalKwhSaved)} kWh saved", fontSize = 11.sp, color = DeepTeal.copy(alpha = 0.7f))
+                    Text("${city.activeCitizens} citizens • ${String.format(Locale.US, "%.0f", city.totalKwhSaved)} kWh reported", fontSize = 11.sp, color = DeepTeal.copy(alpha = 0.7f))
                 }
             }
 
