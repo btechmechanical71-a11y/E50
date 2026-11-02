@@ -231,7 +231,7 @@ fun GameEcoSortScreen(
 
         } else {
             // Completion Screen
-            val creditsEarned = (score * 1.5).toInt()
+            val creditsEarned = 10
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -271,7 +271,7 @@ fun GameEcoSortScreen(
                             Text("Total Score", fontSize = 12.sp, color = DeepTeal, fontWeight = FontWeight.SemiBold)
                             Text("$score pts", fontSize = 32.sp, fontWeight = FontWeight.Black, color = FreshGreen)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("+ $creditsEarned EcoCredits Earned ⚡", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DeepTeal)
+                            Text("Up to $creditsEarned EcoCredits ⚡ (daily game limit)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DeepTeal)
                         }
                     }
 
@@ -297,7 +297,7 @@ fun GameEcoSortScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp).testTag("ecosort_claim_button")
                     ) {
-                        Text(if (isClaimed) "EcoCredits Claimed ✓" else "Claim $creditsEarned EcoCredits & Save", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(if (isClaimed) "EcoCredits Claimed ✓" else "Claim Daily EcoCredits Reward & Save", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
