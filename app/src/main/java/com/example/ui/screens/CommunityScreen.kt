@@ -411,33 +411,39 @@ private fun UserRankRow(user: UserLeaderboardEntry) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "#${user.rank}",
-                    fontWeight = FontWeight.Black,
-                    color = DeepTeal,
-                    fontSize = 13.sp,
-                    modifier = Modifier.width(28.dp)
-                )
+            Text(
+                text = "#${user.rank}",
+                fontWeight = FontWeight.Black,
+                color = DeepTeal,
+                fontSize = 13.sp,
+                modifier = Modifier.width(28.dp)
+            )
 
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(user.name, fontWeight = FontWeight.Bold, color = DeepTeal, fontSize = 14.sp)
-                        if (user.isCurrentUser) {
-                            Surface(color = FreshGreen, shape = RoundedCornerShape(4.dp)) {
-                                Text("You", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-                            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(user.name, fontWeight = FontWeight.Bold, color = DeepTeal, fontSize = 14.sp)
+                    if (user.isCurrentUser) {
+                        Surface(color = FreshGreen, shape = RoundedCornerShape(4.dp)) {
+                            Text("You", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
                         }
                     }
-                    Text("${user.avatar} • ${user.city}", fontSize = 11.sp, color = DeepTeal.copy(alpha = 0.7f))
                 }
+                Text(
+                    "${user.avatar} • ${user.city}",
+                    fontSize = 11.sp,
+                    color = DeepTeal.copy(alpha = 0.7f),
+                    maxLines = 2
+                )
             }
 
             Column(horizontalAlignment = Alignment.End) {
