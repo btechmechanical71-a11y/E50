@@ -1012,17 +1012,7 @@ class E50Repository(context: Context) {
                 baselineTip = "Record typical meter units or daily run hours before starting.",
                 expectedSavingTip = "Save ~1.5 to 2.2 kWh per day (~45-60 kWh/month).",
                 ecoPointsReward = 80,
-                status = ExperimentStatus.ACTIVE,
-                completedDays = listOf(1, 2, 3),
-                dailyChecks = listOf(
-                    DailyCheck(1, true, "24 Oct 2026", 8.2, "Ran AC at 24°C with fan; felt perfectly comfortable"),
-                    DailyCheck(2, true, "25 Oct 2026", 7.9, "Curtains drawn in afternoon, bedroom stayed cool"),
-                    DailyCheck(3, true, "26 Oct 2026", 8.0, "Family adjusted quickly to 24°C setting"),
-                    DailyCheck(4, false),
-                    DailyCheck(5, false),
-                    DailyCheck(6, false),
-                    DailyCheck(7, false)
-                )
+                status = ExperimentStatus.NOT_STARTED
             ),
             EnergyExperiment(
                 id = "exp_standby_cutoff",
