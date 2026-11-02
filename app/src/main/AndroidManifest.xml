@@ -31,7 +31,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="com.aistudio.e50.ecoact.rewards"
+                    android:scheme="com.aistudio.e50.ecoact.final"
                     android:host="auth-callback" />
             </intent-filter>
         </activity>
