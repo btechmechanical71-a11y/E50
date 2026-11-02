@@ -1,7 +1,9 @@
 package com.example
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.SupabaseClientProvider
+import io.github.jan.supabase.auth.handleDeeplinks
 import com.example.ui.components.E50BottomNav
 import com.example.ui.components.E50TopBar
 import com.example.ui.screens.*
@@ -23,13 +27,36 @@ import com.example.viewmodel.AppScreen
 import com.example.viewmodel.E50ViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private val e50ViewModel: E50ViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (intent.data?.path == "/reset-password") {
+            e50ViewModel.onPasswordRecoveryLink()
+        }
+        if (SupabaseClientProvider.isConfigured) {
+            SupabaseClientProvider.client.handleDeeplinks(intent)
+        }
+
         enableEdgeToEdge()
         setContent {
             E50Theme {
-                E50App()
+                E50App(viewModel = e50ViewModel)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if (intent.data?.path == "/reset-password") {
+            e50ViewModel.onPasswordRecoveryLink()
+        }
+        if (SupabaseClientProvider.isConfigured) {
+            SupabaseClientProvider.client.handleDeeplinks(intent)
         }
     }
 }
