@@ -39,7 +39,7 @@ object SupabaseClientProvider {
             install(Postgrest)
             install(Auth) {
                 flowType = FlowType.PKCE
-                scheme = "com.aistudio.e50.ecoact"
+                scheme = "com.aistudio.e50.ecoact.cloud"
                 host = "auth-callback"
             }
         }
