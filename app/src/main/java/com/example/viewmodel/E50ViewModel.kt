@@ -206,10 +206,9 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
                                             city = localProfile.city.ifBlank { snapshot.profile.city },
                                             onboardingCompleted = snapshot.profile.onboardingCompleted ||
                                                 localProfile.onboardingCompleted,
-                                            selectedAvatar = localProfile.selectedAvatar,
-                                            unlockedAvatars = (
-                                                snapshot.profile.unlockedAvatars + localProfile.unlockedAvatars
-                                            ).distinct()
+                                            // Reward balances and avatar ownership are server-authoritative.
+                                            selectedAvatar = snapshot.profile.selectedAvatar,
+                                            unlockedAvatars = snapshot.profile.unlockedAvatars
                                         )
 
                                         repository.restoreCloudData(
@@ -530,9 +529,21 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private suspend fun refreshRewardProfile(userId: String) {
+        val activeProfile = repository.userProfile.value
+        val latest = cloudRepository.loadRewardProfile(userId, activeProfile.email)
+        if (cloudReadyUserId == userId &&
+            repository.userProfile.value.isSignedIn &&
+            repository.userProfile.value.id == userId
+        ) {
+            repository.applyServerRewardProfile(latest)
+        }
+    }
+
     private fun syncProfile() {
         launchCloudSync("profile") { userId ->
             cloudRepository.saveProfile(repository.userProfile.value.copy(id = userId))
+            refreshRewardProfile(userId)
         }
     }
 
@@ -546,6 +557,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         val experiment = repository.experiments.value.firstOrNull { it.id == experimentId } ?: return
         launchCloudSync("experiment") { userId ->
             cloudRepository.saveExperiment(userId, experiment)
+            refreshRewardProfile(userId)
         }
     }
 
@@ -642,6 +654,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         repository.addFootprintEntry(entry)
         launchCloudSync("electricity record") { userId ->
             cloudRepository.saveFootprint(userId, entry)
+            refreshRewardProfile(userId)
         }
     }
 
@@ -674,6 +687,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         repository.recordGameScore(result)
         launchCloudSync("game result") { userId ->
             cloudRepository.saveGameScore(userId, result)
+            refreshRewardProfile(userId)
         }
     }
 
@@ -689,18 +703,34 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         repository.logProofOfImpact(impact)
         launchCloudSync("impact log") { userId ->
             cloudRepository.saveImpactLog(userId, impact)
+            refreshRewardProfile(userId)
         }
     }
 
-    fun unlockAvatar(avatar: String, cost: Int): Boolean {
-        val unlocked = repository.unlockAvatar(avatar, cost)
-        if (unlocked) syncProfile()
-        return unlocked
+    suspend fun unlockAvatar(avatar: String, @Suppress("UNUSED_PARAMETER") displayedCost: Int): Boolean {
+        val userId = cloudReadyUserId ?: return false
+        return try {
+            cloudRepository.purchaseAvatar(avatar)
+            refreshRewardProfile(userId)
+            _dataSyncStatus.value = "Purchased avatar securely in cloud"
+            true
+        } catch (error: Exception) {
+            _dataSyncStatus.value = "Avatar purchase failed: ${error.message ?: "unknown error"}"
+            false
+        }
     }
 
-    fun selectAvatar(avatar: String) {
-        repository.selectAvatar(avatar)
-        syncProfile()
+    suspend fun selectAvatar(avatar: String): Boolean {
+        val userId = cloudReadyUserId ?: return false
+        return try {
+            cloudRepository.selectAvatar(avatar)
+            refreshRewardProfile(userId)
+            _dataSyncStatus.value = "Avatar selection saved to cloud"
+            true
+        } catch (error: Exception) {
+            _dataSyncStatus.value = "Avatar selection failed: ${error.message ?: "unknown error"}"
+            false
+        }
     }
 
     fun resetData() {
