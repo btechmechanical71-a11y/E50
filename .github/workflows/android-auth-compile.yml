@@ -5,6 +5,7 @@ on:
     branches:
       - phase-1-supabase-auth
       - phase-2-database
+      - phase-3-rewards
   workflow_dispatch:
 
 concurrency:
