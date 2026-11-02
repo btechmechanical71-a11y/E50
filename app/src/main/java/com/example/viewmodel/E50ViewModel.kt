@@ -595,14 +595,6 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
         return repository.getAchievements()
     }
 
-    fun getCityLeaderboard(): List<CityLeaderboardEntry> {
-        return repository.getCityLeaderboard()
-    }
-
-    fun getUserLeaderboard(): List<UserLeaderboardEntry> {
-        return repository.getUserLeaderboard()
-    }
-
     // Used for guest entry and updating the locally displayed profile fields.
     // Email/password authentication is handled only by signInWithEmail().
     fun signIn(email: String, name: String, city: String, isGuest: Boolean) {
