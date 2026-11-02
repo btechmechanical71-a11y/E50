@@ -442,7 +442,7 @@ class E50ViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 SupabaseClientProvider.client.auth.resetPasswordForEmail(
                     email = email.trim(),
-                    redirectUrl = "com.aistudio.e50.ecoact.cloud://auth-callback/reset-password"
+                    redirectUrl = "com.aistudio.e50.ecoact.rewards://auth-callback/reset-password"
                 )
                 _authUiState.value = AuthUiState(
                     message = "Password reset instructions have been sent. Check your email."
