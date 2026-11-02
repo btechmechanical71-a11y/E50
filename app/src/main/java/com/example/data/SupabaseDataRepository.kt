@@ -67,9 +67,9 @@ class SupabaseDataRepository {
     }
 
     suspend fun saveProfile(profile: UserProfile) {
-        client.from("profiles").upsert(
+        // Auth trigger/backfill guarantees the row exists; update only allowed profile fields.
+        client.from("profiles").update(
             ProfileWriteRow(
-                id = profile.id,
                 displayName = profile.displayName,
                 city = profile.city,
                 onboardingCompleted = profile.onboardingCompleted,
@@ -77,7 +77,9 @@ class SupabaseDataRepository {
                 unlockedAvatars = profile.unlockedAvatars
             )
         ) {
-            onConflict = "id"
+            filter {
+                eq("id", profile.id)
+            }
         }
     }
 
@@ -314,7 +316,6 @@ private data class ProfileDbRow(
 
 @Serializable
 private data class ProfileWriteRow(
-    val id: String,
     @SerialName("display_name") val displayName: String,
     val city: String,
     @SerialName("onboarding_completed") val onboardingCompleted: Boolean,
